@@ -4,6 +4,7 @@ import { updatePlanMonth } from '@/app/actions';
 import { PageHeader } from '@/components/PageHeader';
 import { SubmitButton } from '@/components/SubmitButton';
 import { Icon } from '@/components/Icon';
+import { HERO_FORMATS } from '@/content/brand';
 import { label } from '@/lib/dates';
 import type { PlanMonth } from '@/lib/types';
 
@@ -24,6 +25,12 @@ export default async function EditPlan() {
             <div><label className="label" htmlFor={`theme-${m.id}`}>Theme</label><input id={`theme-${m.id}`} name="theme" defaultValue={m.theme} className="input" /></div>
             <div><label className="label" htmlFor={`moment-${m.id}`}>Big moment</label><input id={`moment-${m.id}`} name="big_moment" defaultValue={m.big_moment} className="input" /></div>
             <div className="md:col-span-2"><label className="label" htmlFor={`hero-${m.id}`}>Hero content</label><textarea id={`hero-${m.id}`} name="hero_content" defaultValue={m.hero_content} rows={2} className="input" /></div>
+            <div>
+              <label className="label" htmlFor={`format-${m.id}`}>Format</label>
+              <select id={`format-${m.id}`} name="hero_format" defaultValue={m.hero_format} className="input">
+                {HERO_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
             <div><label className="label" htmlFor={`target-${m.id}`}>Follower target</label><input id={`target-${m.id}`} name="follower_target" type="number" defaultValue={m.follower_target} className="input tabular-nums" /></div>
             <div><label className="label" htmlFor={`actual-${m.id}`}>Actual followers at month end</label><input id={`actual-${m.id}`} name="followers_actual" type="number" defaultValue={m.followers_actual ?? ''} className="input tabular-nums" placeholder="Fill in on the 1st" /></div>
             <div className="md:col-span-2"><SubmitButton>Save {label(m.month, 'month')}</SubmitButton></div>

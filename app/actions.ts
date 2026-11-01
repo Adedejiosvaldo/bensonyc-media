@@ -8,11 +8,12 @@ import { requireAdmin, requireLead, requireMember } from '@/lib/auth';
 import { RULES_VERSION } from '@/content/rules';
 import { LESSONS } from '@/content/lessons';
 import { departmentById } from '@/content/departments';
+import { HERO_FORMATS } from '@/content/brand';
 import { buildRoster, servicesForWeek } from '@/lib/roster';
 import { buildWeek, monthForWeek } from '@/lib/plan';
 import { addDays, isValidDate, weekStart } from '@/lib/dates';
 import { sendEmail } from '@/lib/email';
-import type { ContentStatus, Member, MemberStatus, PlanMonth, Role } from '@/lib/types';
+import type { ContentStatus, HeroFormat, Member, MemberStatus, PlanMonth, Role } from '@/lib/types';
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 
@@ -218,12 +219,14 @@ export async function addMember(form: FormData) {
 export async function updatePlanMonth(form: FormData) {
   const { supabase } = await requireAdmin();
   const actual = str(form, 'followers_actual');
+  const heroFormat = str(form, 'hero_format');
   await supabase
     .from('plan_months')
     .update({
       theme: str(form, 'theme'),
       big_moment: str(form, 'big_moment'),
       hero_content: str(form, 'hero_content'),
+      hero_format: HERO_FORMATS.includes(heroFormat as HeroFormat) ? heroFormat : 'Reel',
       follower_target: Number(str(form, 'follower_target')) || 0,
       followers_actual: actual ? Number(actual) : null,
     })

@@ -293,7 +293,11 @@ export function MasterPlan({ months, currentFollowers }: { months: PlanMonth[]; 
                 <p className="mt-1.5 font-display text-2xl uppercase tracking-wide">{m.theme}</p>
                 <div className="mt-3 grid gap-3 text-[14.5px] md:grid-cols-2">
                   <p><span className="font-bold">Big moment: </span>{m.big_moment}</p>
-                  <p><span className="font-bold">Hero content: </span>{m.hero_content}</p>
+                  <p>
+                    <span className="font-bold">Hero content: </span>
+                    <span className="chip mr-1.5 bg-magenta text-white align-middle">{m.hero_format}</span>
+                    {m.hero_content}
+                  </p>
                 </div>
                 {m.highlight && <p className="mt-2 text-sm text-muted">Highlight to add: {m.highlight}</p>}
                 <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-magenta">See this month's content board <Icon name="arrow" className="h-4 w-4 transition group-hover:translate-x-1" /></span>

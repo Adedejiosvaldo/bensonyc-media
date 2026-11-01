@@ -3,6 +3,7 @@ export type Role = 'member' | 'head' | 'admin';
 export type MemberStatus = 'active' | 'on_break' | 'inactive';
 export type ContentStatus = 'planned' | 'shot' | 'edited' | 'posted' | 'skipped';
 export type Pillar = 'People' | 'Word' | 'Events' | 'Community';
+export type HeroFormat = 'Post' | 'Reel' | 'Story' | 'Carousel';
 
 export type Member = {
   id: string;
@@ -23,6 +24,7 @@ export type PlanMonth = {
   theme: string;
   big_moment: string;
   hero_content: string;
+  hero_format: HeroFormat;
   highlight: string | null;
   follower_target: number;
   followers_actual: number | null;

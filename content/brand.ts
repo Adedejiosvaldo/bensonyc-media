@@ -16,6 +16,8 @@ export const SIZES = [
 
 export const SERIES = ['Sunday in 60', 'YC Notes', 'Faces of YC', 'Inside YC', 'Friday Fire', 'Kingdom Business Minute', 'See You Sunday', 'Live from YC'];
 
+export const HERO_FORMATS = ['Post', 'Reel', 'Story', 'Carousel'] as const;
+
 export const DO = [
   'A real face on every flyer',
   'Hook in the first 2 seconds of every reel',
