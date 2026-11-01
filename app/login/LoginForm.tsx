@@ -9,13 +9,16 @@ export function LoginForm({ next }: { next: string }) {
   const [mode, setMode] = useState<'password' | 'link'>('password');
   const [linkState, linkAction] = useFormState(sendMagicLink, null);
   const [pwState, pwAction] = useFormState(signInWithPassword, null);
+  // Nobody using the emailed link has a password handy yet, so send them to set one —
+  // unless they were bounced here from a specific page, which stays the priority.
+  const linkNext = next === '/home' ? '/account' : next;
 
   if (mode === 'link' && linkState?.ok)
     return (
       <div className="rounded-2xl bg-good/10 p-5 text-good">
         <Icon name="mail" className="mb-2 h-6 w-6" />
         <p className="font-bold">{linkState.message}</p>
-        <p className="mt-1 text-sm text-ink/70">Open it on this phone or computer. The link works once and expires in an hour.</p>
+        <p className="mt-1 text-sm text-ink/70">Open it on this phone or computer. The link works once and expires in an hour{linkNext === '/account' ? ' — it will take you to set a password' : ''}.</p>
       </div>
     );
 
@@ -44,7 +47,7 @@ export function LoginForm({ next }: { next: string }) {
 
   return (
     <form action={linkAction} className="space-y-4">
-      <input type="hidden" name="next" value={next} />
+      <input type="hidden" name="next" value={linkNext} />
       <div>
         <label htmlFor="email-link" className="label">Email address</label>
         <input id="email-link" name="email" type="email" required autoComplete="email" placeholder="you@gmail.com" className="input" />
@@ -52,7 +55,7 @@ export function LoginForm({ next }: { next: string }) {
       {linkState && !linkState.ok && <p className="text-sm font-semibold text-magenta">{linkState.message}</p>}
       <SubmitButton className="btn-primary w-full py-3" pendingText="Sending link…">Email me a sign-in link</SubmitButton>
       <p className="text-center text-xs text-muted">
-        No password. We email you a one-time link.{' '}
+        No password, or forgot it? We'll email you a one-time link, then take you to set a new one.{' '}
         <button type="button" onClick={() => setMode('password')} className="font-semibold text-magenta underline-offset-2 hover:underline">
           Have a password? Sign in with it
         </button>
