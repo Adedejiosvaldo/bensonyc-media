@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Layout: plum sidebar shell + light work surface; Anton for display, Plus Jakarta Sans for everything else. */
+:root {
+  --plum-950: 30 8 32;
+  --plum-900: 43 10 44;
+  --plum-700: 91 20 83;
+  --plum-100: 245 235 244;
+  --magenta: 214 25 122;
+  --gold: 246 180 14;
+  --surface: 251 248 251;
+  --card: 255 255 255;
+  --ink: 27 15 29;
+  --muted: 110 94 112;
+  --line: 234 223 234;
+  --good: 22 128 82;
+  --warn: 196 112 0;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --plum-100: 52 22 52;
+    --surface: 20 10 22;
+    --card: 31 17 33;
+    --ink: 246 238 246;
+    --muted: 186 168 188;
+    --line: 60 38 62;
+    --good: 74 200 140;
+    --warn: 240 170 60;
+    color-scheme: dark;
+  }
+}
+
+html, body { background: rgb(var(--surface)); color: rgb(var(--ink)); }
+body { -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { text-wrap: balance; }
+:focus-visible { outline: 2px solid rgb(var(--magenta)); outline-offset: 2px; border-radius: 6px; }
+
+@layer components {
+  .card { @apply rounded-xl2 border border-line bg-card shadow-lift; }
+  .eyebrow { @apply text-[11px] font-bold uppercase tracking-[0.14em] text-magenta; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition active:scale-[.98] disabled:opacity-50; }
+  .btn-primary { @apply btn bg-magenta text-white hover:brightness-110; }
+  .btn-ghost { @apply btn border border-line bg-card text-ink hover:border-magenta/50; }
+  .btn-gold { @apply btn bg-gold text-plum-950 hover:brightness-105; }
+  .input { @apply w-full rounded-xl border border-line bg-card px-4 py-3 text-[15px] text-ink placeholder:text-muted/70 focus:border-magenta focus:outline-none focus:ring-4 focus:ring-magenta/15; }
+  .label { @apply mb-1.5 block text-sm font-semibold text-ink; }
+  .chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide; }
+  .prose-yc p { @apply leading-relaxed text-ink/85; }
+  .prose-yc li { @apply leading-relaxed; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
