@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { departmentById } from '@/content/departments';
 import { addDays, label, todayLagos, weekStart } from '@/lib/dates';
+import { sendEmail } from '@/lib/email';
 import type { ContentItem, Member, RosterSlot } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -43,11 +44,7 @@ export async function GET(request: NextRequest) {
       results.push({ to: m.email, ok: true });
       continue;
     }
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: process.env.RESEND_FROM, to: m.email, subject: `Your duty tomorrow: ${duties.map((d) => d.duty).join(', ')}`, html }),
-    });
+    const res = await sendEmail(m.email, `Your duty tomorrow: ${duties.map((d) => d.duty).join(', ')}`, html);
     results.push({ to: m.email, ok: res.ok });
   }
   return NextResponse.json({ sunday, sent: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).length, dry });
