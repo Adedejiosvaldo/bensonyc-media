@@ -7,9 +7,11 @@ import { createClient } from '@/lib/supabase/server';
 import { requireAdmin, requireLead, requireMember } from '@/lib/auth';
 import { RULES_VERSION } from '@/content/rules';
 import { LESSONS } from '@/content/lessons';
+import { departmentById } from '@/content/departments';
 import { buildRoster, servicesForWeek } from '@/lib/roster';
 import { buildWeek, monthForWeek } from '@/lib/plan';
 import { addDays, isValidDate, weekStart } from '@/lib/dates';
+import { sendEmail } from '@/lib/email';
 import type { ContentStatus, Member, MemberStatus, PlanMonth, Role } from '@/lib/types';
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
@@ -26,7 +28,12 @@ export async function sendMagicLink(_: unknown, form: FormData): Promise<{ ok: b
     email,
     options: { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}` },
   });
-  if (error) return { ok: false, message: error.message };
+  if (error) {
+    if (error.message.toLowerCase().includes('rate limit')) {
+      return { ok: false, message: "Too many link requests for now. Wait a few minutes and try again, or sign in with your password instead." };
+    }
+    return { ok: false, message: error.message };
+  }
   return { ok: true, message: `Check ${email}. We sent you a sign-in link.` };
 }
 
@@ -86,11 +93,33 @@ export async function signPledge(_: unknown, form: FormData): Promise<{ error?: 
   const signature = str(form, 'signature');
   if (form.get('agree') !== 'on') return { error: 'Tick the box to confirm you agree.' };
   if (signature.toLowerCase() !== member.full_name.toLowerCase()) return { error: `Type your full name exactly as registered: ${member.full_name}` };
+  const { data: existingPledge } = await supabase.from('pledges').select('member_id').eq('member_id', member.id).maybeSingle();
   const { error } = await supabase.from('pledges').upsert({ member_id: member.id, signature, rules_version: RULES_VERSION, agreed_at: new Date().toISOString() });
   if (error) return { error: error.message };
   await supabase.from('lesson_progress').upsert({ member_id: member.id, lesson_slug: 'rules' }, { onConflict: 'member_id,lesson_slug' });
+  if (!existingPledge && member.email) {
+    const site = process.env.NEXT_PUBLIC_SITE_URL ?? '';
+    await sendEmail(member.email, 'Welcome to the Benson YC Media Unit', welcomeEmailHtml(member, site)).catch(() => {});
+  }
   revalidatePath('/', 'layout');
   return {};
+}
+
+function welcomeEmailHtml(member: Member, site: string) {
+  const dept = departmentById(member.department_id);
+  const firstName = member.full_name.split(' ')[0];
+  return `<!doctype html><html><body style="margin:0;background:#f7f1f7;font-family:Arial,Helvetica,sans-serif;color:#1b0f1d">
+<div style="max-width:560px;margin:0 auto;padding:24px">
+  <div style="background:#2b0a2c;color:#fff;border-radius:20px;padding:28px">
+    <p style="margin:0;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#f6b40e;font-weight:bold">Benson YC Media Unit</p>
+    <h1 style="margin:10px 0 0;font-size:28px;line-height:1.1">Welcome, ${firstName}</h1>
+    <p style="margin:8px 0 0;color:#d9c6da">You've finished onboarding and signed the pledge — you're now a full member of the media team${dept ? `, ${dept.name}` : ''}.</p>
+  </div>
+  <div style="background:#fff;border-radius:20px;padding:24px;margin-top:12px">
+    <p style="margin:0;font-size:15px;line-height:1.5">Check Home for your next duty and the content you own this week.</p>
+    ${site ? `<p style="margin:20px 0 0"><a href="${site}/home" style="background:#d6197a;color:#fff;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:bold;display:inline-block">Open the media app</a></p>` : ''}
+  </div>
+</div></body></html>`;
 }
 
 /* ───────── Content board ───────── */
