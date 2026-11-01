@@ -11,6 +11,7 @@ export default async function More() {
     { href: '/departments', label: 'Departments', icon: 'team' },
     { href: '/brand', label: 'Brand guide', icon: 'brand' },
     { href: '/rules', label: 'Rules & pledge', icon: 'rules' },
+    { href: '/account', label: 'Account', icon: 'user' },
     ...(isLead(member) ? [{ href: '/admin', label: 'Admin', icon: 'admin' }] : []),
   ];
   return (

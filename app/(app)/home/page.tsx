@@ -54,7 +54,7 @@ export default async function Home() {
             <p className="mt-1 font-display text-3xl uppercase leading-tight">Next: {nextLesson.title}</p>
             <p className="mt-1 text-sm text-white/70">{nextLesson.minutes} min · {nextLesson.summary}</p>
           </div>
-          <span className="btn-gold relative">Continue <Icon name="arrow" className="h-4 w-4" /></span>
+          <span className="btn-primary relative">Continue <Icon name="arrow" className="h-4 w-4" /></span>
         </Link>
       )}
       {!pledge && !nextLesson && (
