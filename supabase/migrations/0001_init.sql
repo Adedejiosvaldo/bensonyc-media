@@ -150,6 +150,10 @@ create or replace function public.guard_member_update() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   if public.is_admin() then return new; end if;
+  -- bootstrap: nobody is admin yet, so the very first admin promotion is allowed
+  if new.role = 'admin' and not exists (select 1 from public.members where role = 'admin') then
+    return new;
+  end if;
   -- claiming an unlinked, pre-listed row during registration is allowed
   if old.user_id is null and new.user_id = auth.uid() and new.role = old.role and new.status = old.status then
     return new;
