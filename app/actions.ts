@@ -30,6 +30,29 @@ export async function sendMagicLink(_: unknown, form: FormData): Promise<{ ok: b
   return { ok: true, message: `Check ${email}. We sent you a sign-in link.` };
 }
 
+export async function signInWithPassword(_: unknown, form: FormData): Promise<{ ok: boolean; message: string }> {
+  const email = str(form, 'email').toLowerCase();
+  const password = str(form, 'password');
+  const next = str(form, 'next') || '/home';
+  if (!email || !password) return { ok: false, message: 'Enter your email and password.' };
+  const supabase = createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return { ok: false, message: "Wrong email or password. If you haven't set a password yet, sign in with the emailed link instead." };
+  revalidatePath('/', 'layout');
+  redirect(next);
+}
+
+export async function setPassword(_: unknown, form: FormData): Promise<{ ok: boolean; message: string }> {
+  const { supabase } = await requireMember();
+  const password = str(form, 'password');
+  const confirm = str(form, 'confirm');
+  if (password.length < 8) return { ok: false, message: 'Use at least 8 characters.' };
+  if (password !== confirm) return { ok: false, message: "Passwords don't match." };
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, message: 'Password set. Use it next time you sign in.' };
+}
+
 /* ───────── Registration ───────── */
 
 export async function joinUnit(_: unknown, form: FormData): Promise<{ error?: string }> {

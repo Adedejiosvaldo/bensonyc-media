@@ -54,11 +54,16 @@ export function AppShell({ name, role, children }: { name: string; role: string;
         <div className="m-3 rounded-2xl bg-white/[0.06] p-4">
           <p className="truncate text-sm font-bold">{name}</p>
           <p className="text-xs capitalize text-white/50">{role}</p>
-          <form action="/auth/signout" method="post" className="mt-3">
-            <button className="flex items-center gap-2 text-xs font-semibold text-white/60 hover:text-white">
-              <Icon name="out" className="h-4 w-4" /> Sign out
-            </button>
-          </form>
+          <div className="mt-3 flex items-center gap-4">
+            <Link href="/account" className="flex items-center gap-2 text-xs font-semibold text-white/60 hover:text-white">
+              <Icon name="user" className="h-4 w-4" /> Account
+            </Link>
+            <form action="/auth/signout" method="post">
+              <button className="flex items-center gap-2 text-xs font-semibold text-white/60 hover:text-white">
+                <Icon name="out" className="h-4 w-4" /> Sign out
+              </button>
+            </form>
+          </div>
         </div>
       </aside>
 

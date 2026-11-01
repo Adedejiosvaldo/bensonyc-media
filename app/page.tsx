@@ -26,8 +26,8 @@ export default async function Landing() {
 
           <div className="mt-16 grid gap-12 lg:mt-24 lg:grid-cols-[1.3fr_1fr] lg:items-end">
             <div>
-              <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-gold">
-                <span className="h-1.5 w-1.5 rounded-full bg-gold" /> Citadel of Greatness
+              <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-white/70">
+                <span className="h-1.5 w-1.5 rounded-full bg-white/50" /> Citadel of Greatness
               </p>
               <h1 className="font-display text-[clamp(3.2rem,10vw,7.5rem)] uppercase leading-[0.88] tracking-wide">
                 The team behind <span className="text-magenta">every</span> Sunday.
@@ -46,7 +46,7 @@ export default async function Landing() {
               <p className="mt-2 font-display text-7xl leading-none text-gold">10,000</p>
               <p className="mt-1 text-white/70">Instagram followers by July 2027</p>
               <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full w-[8%] rounded-full bg-gradient-to-r from-magenta to-gold" />
+                <div className="h-full w-[8%] rounded-full bg-magenta" />
               </div>
               <div className="mt-2 flex justify-between text-xs text-white/50"><span>774 today</span><span>10k</span></div>
             </div>
