@@ -1,9 +1,10 @@
+import Link from 'next/link';
 import { COLORS, DO, DONT, SERIES, SIZES } from '@/content/brand';
 import type { DepartmentGuide } from '@/content/departments';
 import { RULES } from '@/content/rules';
 import { RHYTHM } from '@/lib/plan';
 import type { PlanMonth } from '@/lib/types';
-import { label, todayLagos, monthStart } from '@/lib/dates';
+import { label, todayLagos, monthStart, weekStart } from '@/lib/dates';
 import { Icon } from './Icon';
 import { Logo } from './Logo';
 import { PILLAR_STYLE } from './StatusChip';
@@ -88,6 +89,18 @@ export function BrandGuide() {
               <li key={t} className="flex gap-2"><Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-magenta" />{t}</li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      <section className="card flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <SectionTitle kicker="Assets">Downloads</SectionTitle>
+          <p className="text-sm text-muted">The logo file and the two brand fonts, to use in Canva, CapCut or anywhere else.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <a href="/logo.png" download className="btn-ghost"><Icon name="download" className="h-4 w-4" /> Logo (PNG)</a>
+          <a href="https://fonts.google.com/specimen/Anton" target="_blank" rel="noopener noreferrer" className="btn-ghost"><Icon name="download" className="h-4 w-4" /> Anton (display)</a>
+          <a href="https://fonts.google.com/specimen/Plus+Jakarta+Sans" target="_blank" rel="noopener noreferrer" className="btn-ghost"><Icon name="download" className="h-4 w-4" /> Plus Jakarta Sans (text)</a>
         </div>
       </section>
 
@@ -267,10 +280,11 @@ export function MasterPlan({ months, currentFollowers }: { months: PlanMonth[]; 
         {months.map((m, i) => {
           const isNow = m.month === now;
           const past = m.month < now;
+          const firstWeek = weekStart(monthStart(m.month));
           return (
             <div key={m.id} className="relative flex gap-4">
               <div className={`z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-lg sm:h-12 sm:w-12 ${isNow ? 'bg-magenta text-white' : past ? 'bg-plum-700 text-white' : 'border border-line bg-card text-muted'}`}>{i + 1}</div>
-              <div className={`card min-w-0 flex-1 p-5 ${isNow ? 'ring-2 ring-magenta' : ''}`}>
+              <Link href={`/content?week=${firstWeek}`} className={`card group min-w-0 flex-1 p-5 transition hover:-translate-y-0.5 hover:border-magenta/40 ${isNow ? 'ring-2 ring-magenta' : ''}`}>
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted">{label(m.month, 'month')}</p>
                   {isNow && <span className="chip bg-magenta text-white">Now</span>}
@@ -282,7 +296,8 @@ export function MasterPlan({ months, currentFollowers }: { months: PlanMonth[]; 
                   <p><span className="font-bold">Hero content: </span>{m.hero_content}</p>
                 </div>
                 {m.highlight && <p className="mt-2 text-sm text-muted">Highlight to add: {m.highlight}</p>}
-              </div>
+                <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-magenta">See this month's content board <Icon name="arrow" className="h-4 w-4 transition group-hover:translate-x-1" /></span>
+              </Link>
             </div>
           );
         })}

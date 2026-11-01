@@ -4,18 +4,18 @@ import { usePathname } from 'next/navigation';
 import { Logo } from './Logo';
 import { Icon } from './Icon';
 
-type NavItem = { href: string; label: string; icon: string; lead?: boolean; admin?: boolean };
+type NavItem = { href: string; label: string; icon: string; lead?: boolean; group: string };
 
 const NAV: NavItem[] = [
-  { href: '/home', label: 'Home', icon: 'home' },
-  { href: '/onboarding', label: 'Onboarding', icon: 'course' },
-  { href: '/content', label: 'This week', icon: 'content' },
-  { href: '/roster', label: 'Roster', icon: 'roster' },
-  { href: '/plan', label: '9-month plan', icon: 'plan' },
-  { href: '/departments', label: 'Departments', icon: 'team' },
-  { href: '/brand', label: 'Brand guide', icon: 'brand' },
-  { href: '/rules', label: 'Rules', icon: 'rules' },
-  { href: '/admin', label: 'Admin', icon: 'admin', lead: true },
+  { href: '/home', label: 'Home', icon: 'home', group: 'Your week' },
+  { href: '/content', label: 'This week', icon: 'content', group: 'Your week' },
+  { href: '/roster', label: 'Roster', icon: 'roster', group: 'Your week' },
+  { href: '/plan', label: '9-month plan', icon: 'plan', group: 'Plan' },
+  { href: '/departments', label: 'Departments', icon: 'team', group: 'Plan' },
+  { href: '/onboarding', label: 'Onboarding', icon: 'course', group: 'Learn' },
+  { href: '/brand', label: 'Brand guide', icon: 'brand', group: 'Learn' },
+  { href: '/rules', label: 'Rules', icon: 'rules', group: 'Learn' },
+  { href: '/admin', label: 'Admin', icon: 'admin', lead: true, group: 'Admin' },
 ];
 
 const MOBILE = ['/home', '/onboarding', '/content', '/roster', '/more'];
@@ -25,6 +25,12 @@ export function AppShell({ name, role, children }: { name: string; role: string;
   const lead = role === 'admin' || role === 'head';
   const items = NAV.filter((n) => !n.lead || lead);
   const active = (href: string) => path === href || path.startsWith(href + '/');
+  const groups: { name: string; items: NavItem[] }[] = [];
+  for (const n of items) {
+    const g = groups.at(-1);
+    if (g?.name === n.group) g.items.push(n);
+    else groups.push({ name: n.group, items: [n] });
+  }
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[264px_1fr]">
@@ -37,18 +43,25 @@ export function AppShell({ name, role, children }: { name: string; role: string;
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">Media Unit</p>
           </div>
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3" aria-label="Main">
-          {items.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-semibold transition ${
-                active(n.href) ? 'bg-white text-plum-900' : 'text-white/70 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              <Icon name={n.icon} className={`h-[18px] w-[18px] ${active(n.href) ? 'text-magenta' : ''}`} />
-              {n.label}
-            </Link>
+        <nav className="flex-1 space-y-4 overflow-y-auto px-3" aria-label="Main">
+          {groups.map((g) => (
+            <div key={g.name}>
+              <p className="mb-1 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-white/35">{g.name}</p>
+              <div className="space-y-1">
+                {g.items.map((n) => (
+                  <Link
+                    key={n.href}
+                    href={n.href}
+                    className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-semibold transition ${
+                      active(n.href) ? 'bg-white text-plum-900' : 'text-white/70 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <Icon name={n.icon} className={`h-[18px] w-[18px] ${active(n.href) ? 'text-magenta' : ''}`} />
+                    {n.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
         <div className="m-3 rounded-2xl bg-white/[0.06] p-4">

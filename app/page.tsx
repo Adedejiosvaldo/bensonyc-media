@@ -33,7 +33,7 @@ export default async function Landing() {
                 The team behind <span className="text-magenta">every</span> Sunday.
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/75">
-                The MFM Benson Youth Church media unit. Learn how we work, sign the pledge, see your duty for Sunday and the content we are making this week.
+                MFM Benson Youth Church's media unit. See your Sunday duty, sign the pledge, and this week's content.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link href={cta} className="btn-primary px-7 py-3.5 text-base">Join the unit <Icon name="arrow" className="h-4 w-4" /></Link>
@@ -73,7 +73,6 @@ export default async function Landing() {
       <section id="how" className="border-y border-line bg-card">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-8 lg:grid-cols-[1fr_1.4fr]">
           <div>
-            <p className="eyebrow mb-2">Onboarding</p>
             <h2 className="font-display text-4xl uppercase sm:text-5xl">{LESSONS.length} short lessons. About 25 minutes.</h2>
             <p className="mt-4 text-muted">Every member finishes the course and signs the pledge before their first duty. Your progress is saved, so you can stop and come back.</p>
           </div>
