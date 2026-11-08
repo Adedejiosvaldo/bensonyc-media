@@ -10,6 +10,9 @@ export type IcsEvent = {
   /** Lagos local times ('HH:MM'); omit for all-day */
   start?: string;
   end?: string;
+  location?: string;
+  /** e.g. 'FREQ=WEEKLY;BYDAY=SU' */
+  rrule?: string;
 };
 
 const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
@@ -63,6 +66,8 @@ export function buildCalendar(name: string, events: IcsEvent[]): string {
       const next = new Date(new Date(e.date + 'T00:00:00Z').getTime() + 86_400_000).toISOString().slice(0, 10);
       lines.push(`DTSTART;VALUE=DATE:${compact(e.date)}`, `DTEND;VALUE=DATE:${compact(next)}`);
     }
+    if (e.rrule) lines.push(`RRULE:${e.rrule}`);
+    if (e.location) lines.push(`LOCATION:${esc(e.location)}`);
     if (e.description) lines.push(`DESCRIPTION:${esc(e.description)}`);
     if (e.url) lines.push(`URL:${e.url}`);
     lines.push('END:VEVENT');

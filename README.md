@@ -8,7 +8,8 @@ The web app for the MFM Benson Youth Church media unit. It covers onboarding, th
 
 | Area | Who | What it does |
 | --- | --- | --- |
-| Landing `/` | Anyone | What the unit is, the 10K goal, a join button |
+| Landing `/` | Anyone | The media unit's public page: a scroll-driven 3D story (a phone standing up, a camera viewfinder, departments on a turning ring), the live follower count and a join button |
+| Church `/church` | Anyone | The church's own public page: doors that open as you scroll, a live countdown to Sunday, directions and "add to calendar", what a first visit is like, the year ahead (from the 9-month plan) and the latest Instagram posts. Edit the facts in `content/church.ts` |
 | Sign in `/login` | Anyone | Magic-link email, no passwords |
 | Join `/join` | New members | Name, WhatsApp number, department. It claims a pre-listed name (e.g. "David", Projection) automatically |
 | Onboarding `/onboarding` | Members | 6 lessons: welcome, brand, rules and pledge, your department, how a week works, the 9-month plan. Progress is saved |
@@ -96,6 +97,12 @@ With R2 on a custom domain, you can verify that domain with TikTok for photo pos
 4. Copy the client key and secret into `TIKTOK_CLIENT_KEY` and `TIKTOK_CLIENT_SECRET`.
 
 **Then:** an admin opens **Post → Connect** for each platform and signs in with the unit's account. Tokens are stored in a table only the server can read. Instagram logins last 60 days and TikTok's 365; the daily job refreshes them, and the Post page warns admins a week before one runs out.
+
+## Church page on its own domain
+
+`/church` works straight away. To make it the homepage of a separate domain (e.g. `bensonyc.org`), add that domain to the same Vercel project and set `CHURCH_HOST=bensonyc.org`. Visitors to that domain get the church page at `/`, while the media app keeps its own domain.
+
+Before sharing it, confirm the service time and address in `content/church.ts` (marked CONFIRM).
 
 ## Local development
 ```bash
