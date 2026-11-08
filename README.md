@@ -20,6 +20,9 @@ The web app for the MFM Benson Youth Church media unit. It covers onboarding, th
 | Departments, Brand, Rules | Members | Responsibilities per team, the full brand guide, rules plus who has signed |
 | Admin `/admin` | Heads (view), admins (edit) | Registration, course and pledge tracking; edit department, role, status and breaks; edit the plan |
 | Calendar `/api/calendar/<token>` | Anyone with the secret link | Read-only iCalendar feed for one member. Reset the link on Availability to cut off an old one |
+| Post `/social` | Heads, admins, Social Media team | Upload photos or a video once and it goes to **Instagram and TikTok**. Several photos become a carousel. Link it to an item on the weekly board and that item is marked posted with the link filled in. Admins connect the accounts here |
+| Insights `/insights` | Members | Followers per platform with 7- and 30-day change, combined followers vs this month's plan target, views/likes/comments/shares for the last 30 days, and every recent post ranked by engagement or views |
+| Cron `/api/cron/social` | Vercel, daily 6am Lagos | Finishes any half-done uploads, refreshes logins and pulls the latest numbers |
 | Cron `/api/cron/reminders` | Vercel | Saturday 4pm Lagos: emails each person on tomorrow's roster their duty, checklist and the content they own |
 
 ### How the weekly board comes from the master plan
@@ -55,6 +58,30 @@ On the Roster page, tap **Ask for a swap** on your duty. Everyone else in your d
 ```bash
 curl -H "Authorization: Bearer $CRON_SECRET" "https://YOUR-SITE/api/cron/reminders?dry=1"
 ```
+
+## Social posting (Instagram + TikTok)
+
+Run `supabase/migrations/0003_social_publishing.sql` first. It adds the tables and a public `social` storage bucket (Instagram and TikTok download the files from there).
+
+**What to expect from each platform**
+- **Instagram** posts go live straight away. The account must be a **Professional account (Business or Creator)**. Because the app only posts to the unit's own account, you can keep the Meta app in development mode and add the account as a tester; App Review isn't needed for that.
+- **TikTok** lets an app post publicly only after TikTok audits it. Until then, the app sends videos to the account's **TikTok drafts** (`TIKTOK_POST_MODE=inbox`): open TikTok on the unit phone, paste the caption, add a sound and tap Post. After the audit passes, set `TIKTOK_POST_MODE=direct`.
+- **Photos on TikTok** are pulled from a URL, and TikTok only pulls from domains you've verified. Verify your site's domain (or the `https://YOUR-SITE/api/media/` URL prefix) in the TikTok developer portal. Videos are pushed directly, so they don't need this.
+- Supabase's free plan caps uploads at **50 MB per file**. Compress longer videos or upgrade.
+
+**Instagram setup**
+1. developers.facebook.com → Create app → add the **Instagram** product → *API setup with Instagram login*.
+2. Add the unit's Instagram account under *Roles → Instagram testers* and accept the invite in Instagram (Settings → Website permissions → Apps and websites).
+3. Set the redirect URL to `https://YOUR-SITE/api/social/callback/instagram`.
+4. Copy the Instagram app ID and secret into `INSTAGRAM_APP_ID` and `INSTAGRAM_APP_SECRET` on Vercel.
+
+**TikTok setup**
+1. developers.tiktok.com → Create app → add **Login Kit** and **Content Posting API** (turn on Direct Post if you plan to apply for the audit).
+2. Scopes: `user.info.basic`, `user.info.profile`, `user.info.stats`, `video.upload`, `video.publish`, `video.list`.
+3. Redirect URI: `https://YOUR-SITE/api/social/callback/tiktok`. Add the unit's TikTok as a target user while in sandbox.
+4. Copy the client key and secret into `TIKTOK_CLIENT_KEY` and `TIKTOK_CLIENT_SECRET`.
+
+**Then:** an admin opens **Post → Connect** for each platform and signs in with the unit's account. Tokens are stored in a table only the server can read. Instagram logins last 60 days and TikTok's 365; the daily job refreshes them, and the Post page warns admins a week before one runs out.
 
 ## Local development
 ```bash

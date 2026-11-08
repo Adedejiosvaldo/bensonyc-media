@@ -11,6 +11,8 @@ const NAV: NavItem[] = [
   { href: '/content', label: 'This week', icon: 'content', group: 'Your week' },
   { href: '/roster', label: 'Roster', icon: 'roster', group: 'Your week' },
   { href: '/availability', label: 'Availability', icon: 'calendar', group: 'Your week' },
+  { href: '/social', label: 'Post', icon: 'upload', group: 'Social' },
+  { href: '/insights', label: 'Insights', icon: 'chart', group: 'Social' },
   { href: '/plan', label: '9-month plan', icon: 'plan', group: 'Plan' },
   { href: '/departments', label: 'Departments', icon: 'team', group: 'Plan' },
   { href: '/onboarding', label: 'Onboarding', icon: 'course', group: 'Learn' },

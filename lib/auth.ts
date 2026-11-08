@@ -24,6 +24,9 @@ export async function requireMember() {
 export const isLead = (m: Member | null) => !!m && (m.role === 'admin' || m.role === 'head');
 export const isAdmin = (m: Member | null) => !!m && m.role === 'admin';
 
+/** Heads, admins and the Social Media department can post to the unit's accounts. */
+export const canPostSocial = (m: Member | null) => !!m && m.status !== 'inactive' && (isLead(m) || m.department_id === 'social');
+
 export async function requireLead() {
   const s = await requireMember();
   if (!isLead(s.member)) redirect('/home');
