@@ -55,3 +55,25 @@ export type RosterSlot = {
   member_id: string | null;
   sort: number;
 };
+
+export type Blockout = {
+  id: string;
+  member_id: string;
+  start_date: string;
+  end_date: string;
+  reason: string | null;
+  created_at: string;
+};
+
+export type SwapStatus = 'open' | 'taken' | 'cancelled';
+
+export type SwapRequest = {
+  id: string;
+  slot_id: string;
+  from_member: string;
+  to_member: string | null;
+  note: string | null;
+  status: SwapStatus;
+  created_at: string;
+  resolved_at: string | null;
+};
