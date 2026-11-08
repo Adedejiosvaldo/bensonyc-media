@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { requireMember, isLead } from '@/lib/auth';
-import { assignSlot, generateRoster } from '@/app/actions';
+import { assignSlot, cancelSwap, generateRoster, requestSwap, takeSwap } from '@/app/actions';
 import { PageHeader } from '@/components/PageHeader';
 import { Icon } from '@/components/Icon';
 import { SubmitButton } from '@/components/SubmitButton';
@@ -9,24 +9,34 @@ import { AutoSubmitSelect } from '@/components/AutoSubmitSelect';
 import { DEPARTMENTS } from '@/content/departments';
 import { addDays, isValidDate, label, parse, rangeLabel, todayLagos, weekStart } from '@/lib/dates';
 import { whatsappRoster } from '@/lib/messages';
-import type { Member, RosterSlot } from '@/lib/types';
+import { isBlockedOut } from '@/lib/roster';
+import type { Blockout, Member, RosterSlot, SwapRequest } from '@/lib/types';
 
 export const metadata = { title: 'Roster' };
 
-export default async function RosterPage({ searchParams }: { searchParams: { week?: string } }) {
+export default async function RosterPage({ searchParams }: { searchParams: { week?: string; notice?: string } }) {
   const { supabase, member } = await requireMember();
   const today = todayLagos();
   const upcoming = parse(today).getUTCDay() === 0 ? today : addDays(weekStart(today), 7);
   const sunday = weekStart(isValidDate(searchParams.week) ? searchParams.week : upcoming);
   const lead = isLead(member);
 
-  const [{ data: week }, { data: members }] = await Promise.all([
+  const [{ data: week }, { data: members }, { data: blockouts }] = await Promise.all([
     supabase.from('roster_weeks').select('id, created_at').eq('week_start', sunday).maybeSingle(),
     supabase.from('members').select('id, full_name, department_id, status').order('full_name').returns<Pick<Member, 'id' | 'full_name' | 'department_id' | 'status'>[]>(),
+    supabase.from('blockouts').select('member_id, start_date, end_date').lte('start_date', addDays(sunday, 6)).gte('end_date', sunday).returns<Pick<Blockout, 'member_id' | 'start_date' | 'end_date'>[]>(),
   ]);
   const { data: slots } = week
     ? await supabase.from('roster_slots').select('*').eq('week_id', week.id).order('sort').returns<RosterSlot[]>()
     : { data: [] as RosterSlot[] };
+  const slotIds = (slots ?? []).map((s) => s.id);
+  const { data: swaps } = slotIds.length
+    ? await supabase.from('swap_requests').select('*').in('slot_id', slotIds).in('status', ['open', 'taken']).order('created_at', { ascending: false }).returns<SwapRequest[]>()
+    : { data: [] as SwapRequest[] };
+  const openSwap = new Map((swaps ?? []).filter((w) => w.status === 'open').map((w) => [w.slot_id, w]));
+  const coveredSwap = new Map((swaps ?? []).filter((w) => w.status === 'taken').map((w) => [w.slot_id, w]));
+  const away = blockouts ?? [];
+  const openCount = (slots ?? []).filter((x) => openSwap.has(x.id)).length;
 
   const nameOf = new Map((members ?? []).map((m) => [m.id, m.full_name]));
   const services = Array.from(new Map((slots ?? []).map((s) => [s.service_date + s.service_label, { date: s.service_date, label: s.service_label }])).values());
@@ -44,8 +54,18 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
           </div>
         }
       >
-        In by 7:30am, grace till 8:00. Can’t make it? Swap with someone in your department and tell your head by Friday.
+        In by 7:30am, grace till 8:00. Can’t make it? Tap <b>Ask for a swap</b> on your duty and anyone in your department can take it. Planning ahead? <Link href="/availability" className="font-bold text-magenta">Block out dates</Link>.
       </PageHeader>
+
+      {searchParams.notice && (
+        <p role="status" className="rounded-2xl bg-plum-100 p-4 text-sm font-semibold">{searchParams.notice}</p>
+      )}
+      {openCount > 0 && (
+        <p className="flex items-center gap-2 rounded-2xl bg-gold/15 p-4 text-sm font-semibold">
+          <Icon name="swap" className="h-4 w-4 shrink-0" />
+          {openCount === 1 ? '1 duty needs cover this week.' : `${openCount} duties need cover this week.`} Look for the gold cards below.
+        </p>
+      )}
 
       {lead && (
         <form action={generateRoster} className="card flex flex-col gap-4 p-5 lg:flex-row lg:items-center">
@@ -92,16 +112,56 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
                       <ul className="space-y-3">
                         {rows.map((s) => {
                           const mine = s.member_id === member.id;
+                          const swap = openSwap.get(s.id);
+                          const covered = coveredSwap.get(s.id);
+                          const blocked = !!s.member_id && isBlockedOut(away, s.member_id, s.service_date);
+                          const canTake = !!swap && !mine && member.department_id === d.id && !isBlockedOut(away, member.id, s.service_date);
+                          const upcoming = s.service_date >= today;
+                          const opts = options.map((o) => (o.value && isBlockedOut(away, o.value, s.service_date) ? { ...o, label: `${o.label} (away)` } : o));
                           return (
-                            <li key={s.id} className={`rounded-xl p-3 ${mine ? 'bg-magenta/10 ring-1 ring-magenta/40' : 'bg-plum-100/60'}`}>
-                              <p className="text-xs font-semibold text-muted">{s.duty}</p>
+                            <li key={s.id} className={`rounded-xl p-3 ${swap ? 'bg-gold/15 ring-1 ring-gold/60' : mine ? 'bg-magenta/10 ring-1 ring-magenta/40' : 'bg-plum-100/60'}`}>
+                              <div className="flex items-center gap-2">
+                                <p className="text-xs font-semibold text-muted">{s.duty}</p>
+                                {swap && <span className="chip ml-auto bg-gold text-plum-950">Needs cover</span>}
+                                {!swap && blocked && <span className="chip ml-auto bg-magenta/15 text-magenta">Away</span>}
+                              </div>
                               {lead ? (
                                 <form action={assignSlot} className="mt-1.5">
                                   <input type="hidden" name="id" value={s.id} />
-                                  <AutoSubmitSelect name="member_id" label={s.duty} defaultValue={s.member_id ?? ''} options={options} className="text-sm" />
+                                  <AutoSubmitSelect name="member_id" label={s.duty} defaultValue={s.member_id ?? ''} options={opts} className="text-sm" />
                                 </form>
                               ) : (
                                 <p className={`mt-0.5 font-bold ${s.member_id ? '' : 'text-magenta'}`}>{s.member_id ? nameOf.get(s.member_id) : 'Needs someone'}{mine ? ' (you)' : ''}</p>
+                              )}
+                              {swap?.note && <p className="mt-1 text-sm italic text-muted">“{swap.note}”</p>}
+                              {covered && !swap && covered.to_member === s.member_id && (
+                                <p className="mt-1 text-xs text-muted">Covering for {nameOf.get(covered.from_member) ?? 'a teammate'}</p>
+                              )}
+                              {upcoming && swap && canTake && (
+                                <form action={takeSwap} className="mt-2">
+                                  <input type="hidden" name="swap_id" value={swap.id} />
+                                  <input type="hidden" name="week" value={sunday} />
+                                  <SubmitButton className="btn-gold w-full py-2" pendingText="Taking…">Take this duty</SubmitButton>
+                                </form>
+                              )}
+                              {upcoming && swap && (mine || lead) && (
+                                <form action={cancelSwap} className="mt-2">
+                                  <input type="hidden" name="swap_id" value={swap.id} />
+                                  <SubmitButton className="text-xs font-bold text-magenta hover:underline" pendingText="Cancelling…">{mine ? 'I can make it after all' : 'Cancel swap request'}</SubmitButton>
+                                </form>
+                              )}
+                              {upcoming && mine && !swap && (
+                                <details className="mt-2 group">
+                                  <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs font-bold text-magenta">
+                                    <Icon name="swap" className="h-3.5 w-3.5" /> Ask for a swap
+                                  </summary>
+                                  <form action={requestSwap} className="mt-2 space-y-2">
+                                    <input type="hidden" name="slot_id" value={s.id} />
+                                    <input type="hidden" name="week" value={sunday} />
+                                    <input name="note" maxLength={200} placeholder="Why? (optional)" className="input py-2 text-sm" aria-label="Reason for the swap" />
+                                    <SubmitButton className="btn-primary w-full py-2" pendingText="Sending…">Ask my department</SubmitButton>
+                                  </form>
+                                </details>
                               )}
                             </li>
                           );

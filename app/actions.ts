@@ -10,9 +10,9 @@ import { LESSONS } from '@/content/lessons';
 import { departmentById } from '@/content/departments';
 import { buildRoster, servicesForWeek } from '@/lib/roster';
 import { buildWeek, monthForWeek } from '@/lib/plan';
-import { addDays, isValidDate, weekStart } from '@/lib/dates';
+import { addDays, isValidDate, label, todayLagos, weekStart } from '@/lib/dates';
 import { sendEmail } from '@/lib/email';
-import type { ContentStatus, Member, MemberStatus, PlanMonth, Role } from '@/lib/types';
+import type { ContentStatus, Member, MemberStatus, PlanMonth, RosterSlot, Role } from '@/lib/types';
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 
@@ -165,14 +165,15 @@ export async function generateRoster(form: FormData) {
   const special = form.get('special') === 'on';
   const midweekDay = Number(str(form, 'midweek_day') || 3);
 
-  const [{ data: members }, { data: recent }] = await Promise.all([
+  const [{ data: members }, { data: recent }, { data: blockouts }] = await Promise.all([
     supabase.from('members').select('id, department_id, status, break_until').returns<Pick<Member, 'id' | 'department_id' | 'status' | 'break_until'>[]>(),
     supabase.from('roster_slots').select('member_id, service_date').gte('service_date', addDays(sunday, -56)).lt('service_date', sunday),
+    supabase.from('blockouts').select('member_id, start_date, end_date').lte('start_date', addDays(sunday, 6)).gte('end_date', sunday),
   ]);
   const counts: Record<string, number> = {};
   (recent ?? []).forEach((r: { member_id: string | null }) => r.member_id && (counts[r.member_id] = (counts[r.member_id] ?? 0) + 1));
 
-  const slots = buildRoster(members ?? [], counts, servicesForWeek(sunday, { midweek, midweekDay, special }));
+  const slots = buildRoster(members ?? [], counts, servicesForWeek(sunday, { midweek, midweekDay, special }), Math.random, blockouts ?? []);
 
   const { data: week, error } = await supabase
     .from('roster_weeks')
@@ -188,8 +189,127 @@ export async function generateRoster(form: FormData) {
 
 export async function assignSlot(form: FormData) {
   const { supabase } = await requireLead();
-  await supabase.from('roster_slots').update({ member_id: str(form, 'member_id') || null }).eq('id', str(form, 'id'));
+  const id = str(form, 'id');
+  await supabase.from('roster_slots').update({ member_id: str(form, 'member_id') || null }).eq('id', id);
+  // A lead moving the slot by hand settles any open swap request on it.
+  const { data: open } = await supabase.from('swap_requests').select('id').eq('slot_id', id).eq('status', 'open').maybeSingle();
+  if (open) await supabase.rpc('cancel_swap', { p_swap: open.id });
   revalidatePath('/roster');
+}
+
+/* ───────── Availability ───────── */
+
+export async function addBlockout(_: unknown, form: FormData): Promise<{ ok: boolean; message: string }> {
+  const { supabase, member } = await requireMember();
+  const start = str(form, 'start_date');
+  const end = str(form, 'end_date') || start;
+  const reason = str(form, 'reason').slice(0, 120);
+  if (!isValidDate(start) || !isValidDate(end)) return { ok: false, message: 'Pick a start date.' };
+  if (end < start) return { ok: false, message: 'The end date is before the start date.' };
+  if (end < todayLagos()) return { ok: false, message: 'Those dates are already in the past.' };
+  const { error } = await supabase.from('blockouts').insert({ member_id: member.id, start_date: start, end_date: end, reason: reason || null });
+  if (error) return { ok: false, message: error.message };
+  revalidatePath('/availability');
+  revalidatePath('/roster');
+  return { ok: true, message: start === end ? `Saved. You won't be rostered on ${label(start, 'long')}.` : `Saved. You won't be rostered from ${label(start)} to ${label(end)}.` };
+}
+
+export async function deleteBlockout(form: FormData) {
+  const { supabase } = await requireMember();
+  await supabase.from('blockouts').delete().eq('id', str(form, 'id'));
+  revalidatePath('/availability');
+  revalidatePath('/roster');
+}
+
+/* ───────── Duty swaps ───────── */
+
+const swapEmail = (title: string, body: string, site: string) => `<!doctype html><html><body style="margin:0;background:#f7f1f7;font-family:Arial,Helvetica,sans-serif;color:#1b0f1d">
+<div style="max-width:560px;margin:0 auto;padding:24px">
+  <div style="background:#2b0a2c;color:#fff;border-radius:20px;padding:28px">
+    <p style="margin:0;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#f6b40e;font-weight:bold">Benson YC Media Unit</p>
+    <h1 style="margin:10px 0 0;font-size:26px;line-height:1.15">${escapeHtml(title)}</h1>
+  </div>
+  <div style="background:#fff;border-radius:20px;padding:24px;margin-top:12px">
+    <p style="margin:0;font-size:15px;line-height:1.5">${body}</p>
+    ${site ? `<p style="margin:20px 0 0"><a href="${site}/roster" style="background:#d6197a;color:#fff;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:bold;display:inline-block">Open the roster</a></p>` : ''}
+  </div>
+</div></body></html>`;
+
+const rosterUrl = (form: FormData) => {
+  const week = str(form, 'week');
+  return `/roster?week=${isValidDate(week) ? week : weekStart(todayLagos())}`;
+};
+
+const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+
+export async function requestSwap(form: FormData) {
+  const { supabase, member } = await requireMember();
+  const slotId = str(form, 'slot_id');
+  const note = str(form, 'note').slice(0, 200);
+  const back = rosterUrl(form);
+  const { error } = await supabase.rpc('request_swap', { p_slot: slotId, p_note: note });
+  if (error) redirect(`${back}&notice=${encodeURIComponent(error.message)}`);
+
+  // Let the rest of the department know (best effort).
+  const { data: slot } = await supabase.from('roster_slots').select('*').eq('id', slotId).maybeSingle<RosterSlot>();
+  if (slot) {
+    const { data: team } = await supabase
+      .from('members')
+      .select('email, status')
+      .eq('department_id', slot.department_id)
+      .neq('id', member.id)
+      .neq('status', 'inactive');
+    const site = process.env.NEXT_PUBLIC_SITE_URL ?? '';
+    const first = escapeHtml(member.full_name.split(' ')[0]);
+    const body = `${first} needs cover for <b>${escapeHtml(slot.duty)}</b> at ${escapeHtml(slot.service_label)} on ${label(slot.service_date, 'long')}.${note ? `<br><br>“${escapeHtml(note)}”` : ''}<br><br>If you can take it, open the roster and tap <b>Take this duty</b>. First to tap gets it.`;
+    await Promise.all(
+      (team ?? [])
+        .filter((t) => t.email)
+        .map((t) => sendEmail(t.email!, `Can you cover ${slot.duty} on ${label(slot.service_date)}?`, swapEmail('Cover needed', body, site)).catch(() => {})),
+    );
+  }
+  revalidatePath('/roster');
+  revalidatePath('/home');
+  redirect(`${back}&notice=${encodeURIComponent('Swap requested. Your department has been emailed.')}`);
+}
+
+export async function takeSwap(form: FormData) {
+  const { supabase, member } = await requireMember();
+  const swapId = str(form, 'swap_id');
+  const back = rosterUrl(form);
+  const { error } = await supabase.rpc('take_swap', { p_swap: swapId });
+  if (error) redirect(`${back}&notice=${encodeURIComponent(error.message)}`);
+
+  const { data: swap } = await supabase.from('swap_requests').select('from_member, slot_id').eq('id', swapId).maybeSingle();
+  if (swap) {
+    const [{ data: from }, { data: slot }] = await Promise.all([
+      supabase.from('members').select('email, full_name').eq('id', swap.from_member).maybeSingle(),
+      supabase.from('roster_slots').select('*').eq('id', swap.slot_id).maybeSingle<RosterSlot>(),
+    ]);
+    if (from?.email && slot) {
+      const site = process.env.NEXT_PUBLIC_SITE_URL ?? '';
+      const body = `${escapeHtml(member.full_name)} is now covering <b>${escapeHtml(slot.duty)}</b> at ${escapeHtml(slot.service_label)} on ${label(slot.service_date, 'long')}. You're off this one.`;
+      await sendEmail(from.email, `${member.full_name.split(' ')[0]} is covering your duty`, swapEmail('Your duty is covered', body, site)).catch(() => {});
+    }
+  }
+  revalidatePath('/roster');
+  revalidatePath('/home');
+  redirect(`${back}&notice=${encodeURIComponent("It's yours. The roster is updated.")}`);
+}
+
+export async function cancelSwap(form: FormData) {
+  const { supabase } = await requireMember();
+  await supabase.rpc('cancel_swap', { p_swap: str(form, 'swap_id') });
+  revalidatePath('/roster');
+  revalidatePath('/home');
+}
+
+/* ───────── Calendar feed ───────── */
+
+export async function resetCalendarToken() {
+  const { supabase, member } = await requireMember();
+  await supabase.from('calendar_tokens').upsert({ member_id: member.id, token: crypto.randomUUID() }, { onConflict: 'member_id' });
+  revalidatePath('/availability');
 }
 
 /* ───────── Admin ───────── */

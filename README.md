@@ -14,10 +14,12 @@ The web app for the MFM Benson Youth Church media unit. It covers onboarding, th
 | Onboarding `/onboarding` | Members | 6 lessons: welcome, brand, rules and pledge, your department, how a week works, the 9-month plan. Progress is saved |
 | Home `/home` | Members | Your duty this Sunday, course progress, content you own, this month's theme |
 | This week `/content` | Members | The Sun to Sat board **generated from the 9-month plan**. Change owner and status inline |
-| Roster `/roster` | Members (heads and admins generate) | Fair shuffle, camera halves split, people on break skipped, special-service phone camera, optional midweek service, a WhatsApp message to copy |
+| Roster `/roster` | Members (heads and admins generate) | Fair shuffle, camera halves split, people on break or blocked out skipped, special-service phone camera, optional midweek service, a WhatsApp message to copy. **Duty swaps**: ask for cover on your duty and anyone in your department can take it, no admin needed |
+| Availability `/availability` | Members | Block out dates you can't serve (the roster skips you), see who's away in the next 6 weeks, and subscribe to a private **calendar feed** of your duties and content (Google, Apple, Outlook) |
 | 9-month plan `/plan` | Members | Monthly themes, big moments, hero content, targets vs actual followers |
 | Departments, Brand, Rules | Members | Responsibilities per team, the full brand guide, rules plus who has signed |
 | Admin `/admin` | Heads (view), admins (edit) | Registration, course and pledge tracking; edit department, role, status and breaks; edit the plan |
+| Calendar `/api/calendar/<token>` | Anyone with the secret link | Read-only iCalendar feed for one member. Reset the link on Availability to cut off an old one |
 | Cron `/api/cron/reminders` | Vercel | Saturday 4pm Lagos: emails each person on tomorrow's roster their duty, checklist and the content they own |
 
 ### How the weekly board comes from the master plan
@@ -28,12 +30,16 @@ The web app for the MFM Benson Youth Church media unit. It covers onboarding, th
 Briefs pull in the month's theme and big moment. Edit the plan in **Admin → Edit 9-month plan**, then rebuild the week.
 
 ### How the roster stays fair
-`lib/roster.ts` ranks each department by duties in the last 8 weeks (fewest first, ties random). Nobody gets two duties in the same department at the same service unless the team is too small. Members marked *on break* are skipped until their `break_until` date.
+`lib/roster.ts` ranks each department by duties in the last 8 weeks (fewest first, ties random). Nobody gets two duties in the same department at the same service unless the team is too small. Members marked *on break* are skipped until their `break_until` date, and anyone with a blockout covering the service date is skipped too.
+
+### How swaps work
+On the Roster page, tap **Ask for a swap** on your duty. Everyone else in your department gets an email and sees a gold *Needs cover* card on Home and the Roster. The first person to tap **Take this duty** gets the slot and you get an email saying you're covered. The database functions `request_swap`, `take_swap` and `cancel_swap` check that only your own duty can be offered and only someone in the same department can take it.
 
 ## Set it up (about 20 minutes)
 
 1. **Supabase**: create a free project at supabase.com.
-   - SQL Editor → run `supabase/migrations/0001_init.sql`, then `supabase/seed.sql`.
+   - SQL Editor → run `supabase/migrations/0001_init.sql`, then `supabase/seed.sql`, then `supabase/migrations/0002_availability_swaps_calendar.sql`.
+   - Already running the app? Just run `0002_availability_swaps_calendar.sql` to add availability, swaps and calendar feeds.
    - Authentication → URL Configuration: set **Site URL** to your Vercel URL and add `https://YOUR-SITE/auth/callback` to Redirect URLs.
    - Authentication → Email: the built-in sender is rate-limited. For more than a handful of sign-ins a day, set custom SMTP (you can use Resend's SMTP).
 2. **Resend**: create a free account, verify a sending domain (or start with `onboarding@resend.dev` for testing), copy the API key.

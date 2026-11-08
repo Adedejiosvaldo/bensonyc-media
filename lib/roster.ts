@@ -1,4 +1,4 @@
-import type { DepartmentId, Member } from './types';
+import type { Blockout, DepartmentId, Member } from './types';
 import { addDays } from './dates';
 
 export type Service = { date: string; label: string; special: boolean; kind: 'sunday' | 'midweek' };
@@ -36,10 +36,16 @@ export function isAvailable(m: Pick<Member, 'status' | 'break_until'>, date: str
   return true;
 }
 
+/** True if any of the member's blockout ranges covers `date`. */
+export function isBlockedOut(blockouts: Pick<Blockout, 'member_id' | 'start_date' | 'end_date'>[], memberId: string, date: string): boolean {
+  return blockouts.some((b) => b.member_id === memberId && b.start_date <= date && b.end_date >= date);
+}
+
 export type DraftSlot = { service_date: string; service_label: string; department_id: DepartmentId; duty: string; member_id: string | null; sort: number };
 
 /**
  * Fair shuffle: whoever served least in recent weeks goes first, ties broken at random.
+ * Members on break or with a blockout covering the service date are skipped.
  * Nobody takes two duties in the same department at the same service unless the team is too small.
  * The two Sunday camera halves always go to different people so nobody gets tired.
  */
@@ -48,6 +54,7 @@ export function buildRoster(
   recentCounts: Record<string, number>,
   services: Service[],
   random: () => number = Math.random,
+  blockouts: Pick<Blockout, 'member_id' | 'start_date' | 'end_date'>[] = [],
 ): DraftSlot[] {
   const counts: Record<string, number> = { ...recentCounts };
   const jitter: Record<string, number> = {};
@@ -57,7 +64,7 @@ export function buildRoster(
 
   for (const service of services) {
     for (const dept of DEPARTMENT_ORDER) {
-      const pool = members.filter((m) => m.department_id === dept && isAvailable(m, service.date));
+      const pool = members.filter((m) => m.department_id === dept && isAvailable(m, service.date) && !isBlockedOut(blockouts, m.id, service.date));
       const usedHere = new Set<string>();
       for (const duty of dutiesFor(dept, service)) {
         const ranked = [...pool].sort(

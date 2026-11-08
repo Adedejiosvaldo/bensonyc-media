@@ -6,7 +6,7 @@ import { Icon } from '@/components/Icon';
 import { Ring } from '@/components/Progress';
 import { StatusChip, PILLAR_STYLE } from '@/components/StatusChip';
 import { addDays, label, monthStart, parse, todayLagos, weekStart } from '@/lib/dates';
-import type { ContentItem, PlanMonth, RosterSlot } from '@/lib/types';
+import type { ContentItem, PlanMonth, RosterSlot, SwapRequest } from '@/lib/types';
 
 export const metadata = { title: 'Home' };
 
@@ -28,6 +28,17 @@ export default async function Home() {
   const { data: mySlots } = week
     ? await supabase.from('roster_slots').select('*').eq('week_id', week.id).eq('member_id', member.id).order('sort').returns<RosterSlot[]>()
     : { data: [] as RosterSlot[] };
+
+  // Open swap requests from teammates in my department, for services still ahead.
+  const { data: openSwaps } = await supabase.from('swap_requests').select('*').eq('status', 'open').neq('from_member', member.id).returns<SwapRequest[]>();
+  const { data: swapSlots } = openSwaps && openSwaps.length
+    ? await supabase.from('roster_slots').select('*').in('id', openSwaps.map((w) => w.slot_id)).eq('department_id', member.department_id ?? '').gte('service_date', today).order('service_date').returns<RosterSlot[]>()
+    : { data: [] as RosterSlot[] };
+  const mySwapSlots = new Set((mySlots ?? []).map((s) => s.id));
+  const { data: myOpen } = mySwapSlots.size
+    ? await supabase.from('swap_requests').select('slot_id').eq('status', 'open').in('slot_id', [...mySwapSlots])
+    : { data: [] as { slot_id: string }[] };
+  const waitingCover = new Set((myOpen ?? []).map((w) => w.slot_id));
 
   const done = new Set((progress ?? []).map((p) => p.lesson_slug));
   const doneCount = LESSONS.filter((l) => done.has(l.slug)).length;
@@ -61,6 +72,17 @@ export default async function Home() {
         <Link href="/rules" className="block rounded-2xl bg-magenta/10 p-5 font-semibold text-magenta">You have not signed the pledge yet. Sign it on the Rules page →</Link>
       )}
 
+      {swapSlots && swapSlots.length > 0 && (
+        <Link href={`/roster?week=${weekStart(swapSlots[0].service_date)}`} className="flex items-center gap-4 rounded-2xl bg-gold/15 p-5 ring-1 ring-gold/60">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold text-plum-950"><Icon name="swap" /></span>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold">{swapSlots.length === 1 ? 'A teammate needs cover' : `${swapSlots.length} teammates need cover`}</p>
+            <p className="truncate text-sm text-muted">{swapSlots.map((s) => `${s.duty} · ${label(s.service_date)}`).join(' / ')}</p>
+          </div>
+          <Icon name="arrow" className="h-4 w-4 shrink-0" />
+        </Link>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
         <section className="card p-6">
           <div className="mb-4 flex items-center justify-between">
@@ -78,6 +100,7 @@ export default async function Home() {
                   <div className="min-w-0">
                     <p className="font-bold">{s.duty}</p>
                     <p className="text-sm text-muted">{s.service_label} · {label(s.service_date, 'long')} · be in by 7:30</p>
+                    {waitingCover.has(s.id) && <p className="mt-1 text-xs font-bold text-warn">Swap requested, waiting for cover</p>}
                   </div>
                 </li>
               ))}

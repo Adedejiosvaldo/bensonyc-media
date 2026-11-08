@@ -10,6 +10,7 @@ const NAV: NavItem[] = [
   { href: '/home', label: 'Home', icon: 'home', group: 'Your week' },
   { href: '/content', label: 'This week', icon: 'content', group: 'Your week' },
   { href: '/roster', label: 'Roster', icon: 'roster', group: 'Your week' },
+  { href: '/availability', label: 'Availability', icon: 'calendar', group: 'Your week' },
   { href: '/plan', label: '9-month plan', icon: 'plan', group: 'Plan' },
   { href: '/departments', label: 'Departments', icon: 'team', group: 'Plan' },
   { href: '/onboarding', label: 'Onboarding', icon: 'course', group: 'Learn' },

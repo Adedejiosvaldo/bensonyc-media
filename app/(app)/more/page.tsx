@@ -7,6 +7,7 @@ export const metadata = { title: 'More' };
 export default async function More() {
   const { member } = await requireMember();
   const links = [
+    { href: '/availability', label: 'Availability & calendar', icon: 'calendar' },
     { href: '/plan', label: '9-month plan', icon: 'plan' },
     { href: '/departments', label: 'Departments', icon: 'team' },
     { href: '/brand', label: 'Brand guide', icon: 'brand' },
