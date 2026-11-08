@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowser } from '@/lib/supabase/browser';
-import { createSocialPost } from '@/app/social-actions';
+import { createSocialPost, prepareUpload } from '@/app/social-actions';
 import { Icon } from '@/components/Icon';
 import type { MediaFile, Platform } from '@/lib/social/types';
 
@@ -27,9 +27,20 @@ async function toJpeg(file: File): Promise<Blob> {
   return new Promise((ok, fail) => canvas.toBlob((b) => (b ? ok(b) : fail(new Error('Could not convert the photo'))), 'image/jpeg', 0.92));
 }
 
-const safeName = (name: string) => name.toLowerCase().replace(/\.[^.]+$/, '').replace(/[^a-z0-9]+/g, '-').slice(0, 40) || 'file';
+/** PUT straight to R2 with upload progress. */
+function putWithProgress(url: string, body: Blob, type: string, onProgress: (pct: number) => void) {
+  return new Promise<void>((ok, fail) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url);
+    xhr.setRequestHeader('Content-Type', type);
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(Math.round((e.loaded / e.total) * 100));
+    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? ok() : fail(new Error(`Upload failed (${xhr.status}). Check the R2 bucket's CORS settings.`)));
+    xhr.onerror = () => fail(new Error('Upload failed. Check your connection, or the R2 bucket’s CORS settings.'));
+    xhr.send(body);
+  });
+}
 
-export function Composer({ connected, items, tiktokMode }: { connected: Platform[]; items: Item[]; tiktokMode: 'inbox' | 'direct' }) {
+export function Composer({ connected, items, tiktokMode, storage }: { connected: Platform[]; items: Item[]; tiktokMode: 'inbox' | 'direct'; storage: 'r2' | 'supabase' }) {
   const router = useRouter();
   const [files, setFiles] = useState<Picked[]>([]);
   const [caption, setCaption] = useState('');
@@ -47,9 +58,11 @@ export function Composer({ connected, items, tiktokMode }: { connected: Platform
     if (platforms.includes('instagram') && files.length > 10) w.push('Instagram carousels take up to 10 items.');
     if (platforms.includes('tiktok') && videos && images) w.push("TikTok can't mix photos and videos. Untick TikTok or use one type.");
     if (platforms.includes('tiktok') && videos > 1) w.push('TikTok takes one video per post.');
-    if (files.some((f) => f.file.size > 50 * MB)) w.push('Files over 50 MB need a paid Supabase plan. Compress the video if the upload fails.');
+    if (storage === 'supabase' && files.some((f) => f.file.size > 50 * MB)) w.push('Files over 50 MB won’t upload until Cloudflare R2 is set up (see the README). Compress the video for now.');
+    if (storage === 'r2' && files.some((f) => f.file.size > 2048 * MB)) w.push('Files over 2 GB can’t be uploaded.');
+    if (platforms.includes('instagram') && files.some((f) => f.type === 'video' && f.file.size > 300 * MB)) w.push('Instagram may reject videos over about 300 MB. Export at 1080p if it fails.');
     return w;
-  }, [platforms, files, videos, images]);
+  }, [platforms, files, videos, images, storage]);
 
   const pick = (list: FileList | null) => {
     if (!list) return;
@@ -71,20 +84,22 @@ export function Composer({ connected, items, tiktokMode }: { connected: Platform
     setError(null);
     if (!files.length) return setError('Add a photo or video.');
     if (!platforms.length) return setError('Pick at least one platform.');
-    const supabase = createBrowser();
-    const month = new Date().toISOString().slice(0, 7);
     const uploaded: MediaFile[] = [];
     try {
       for (const [i, f] of files.entries()) {
-        setBusy(`Uploading ${i + 1} of ${files.length}…`);
+        const step = `Uploading ${i + 1} of ${files.length}`;
+        setBusy(`${step}…`);
         const body = f.type === 'image' ? await toJpeg(f.file) : f.file;
-        const ext = f.type === 'image' ? 'jpg' : (f.file.name.split('.').pop() || 'mp4').toLowerCase();
-        const path = `${month}/${crypto.randomUUID()}-${safeName(f.file.name)}.${ext}`;
         const mime = f.type === 'image' ? 'image/jpeg' : f.file.type || 'video/mp4';
-        const { error: upErr } = await supabase.storage.from('social').upload(path, body, { contentType: mime, upsert: false });
-        if (upErr) throw new Error(upErr.message);
-        const { data } = supabase.storage.from('social').getPublicUrl(path);
-        uploaded.push({ path, url: data.publicUrl, type: f.type, size: body.size, mime });
+        const slot = await prepareUpload({ name: f.file.name, type: mime, size: body.size });
+        if (slot.error || !slot.path || !slot.url) throw new Error(slot.error ?? 'Could not start the upload.');
+        if (slot.uploadUrl) {
+          await putWithProgress(slot.uploadUrl, body, mime, (pct) => setBusy(`${step} · ${pct}%`));
+        } else {
+          const { error: upErr } = await createBrowser().storage.from('social').upload(slot.path, body, { contentType: mime, upsert: false });
+          if (upErr) throw new Error(upErr.message);
+        }
+        uploaded.push({ path: slot.path, url: slot.url, type: f.type, size: body.size, mime });
       }
       setBusy('Sending to ' + platforms.map((p) => (p === 'instagram' ? 'Instagram' : 'TikTok')).join(' and ') + '…');
       const res = await createSocialPost({ caption, media: uploaded, platforms, contentItemId: itemId || null });

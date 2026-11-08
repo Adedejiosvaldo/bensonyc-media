@@ -7,9 +7,28 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { advanceAll } from '@/lib/social/publish';
 import { syncStats } from '@/lib/social/sync';
 import { monthStart, todayLagos } from '@/lib/dates';
+import { isOurUrl, presignUpload, publicUrl, storageMode } from '@/lib/storage';
 import { PLATFORMS, type MediaFile, type Platform } from '@/lib/social/types';
 
-const SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const MB = 1024 * 1024;
+const LIMITS = { r2: { image: 30 * MB, video: 2048 * MB }, supabase: { image: 50 * MB, video: 50 * MB } };
+
+/** Reserve a storage path for one file. With R2 it also returns a signed URL the browser uploads to. */
+export async function prepareUpload(input: { name: string; type: string; size: number }): Promise<{ error?: string; path?: string; url?: string; uploadUrl?: string; mode?: 'r2' | 'supabase' }> {
+  const { member } = await requireMember();
+  if (!canPostSocial(member)) return { error: 'Only heads, admins and the Social Media team can post.' };
+  const kind = input.type.startsWith('video/') ? 'video' : input.type.startsWith('image/') ? 'image' : null;
+  if (!kind) return { error: 'Only photos and videos can be posted.' };
+  const mode = storageMode();
+  const max = LIMITS[mode][kind];
+  if (!(input.size > 0) || input.size > max) return { error: `${input.name} is too big. The limit is ${Math.round(max / MB)} MB per ${kind}.` };
+
+  const base = input.name.toLowerCase().replace(/\.[^.]+$/, '').replace(/[^a-z0-9]+/g, '-').slice(0, 40) || 'file';
+  const ext = kind === 'image' ? 'jpg' : (/\.([a-z0-9]{2,5})$/i.exec(input.name)?.[1] ?? 'mp4').toLowerCase();
+  const path = `${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}-${base}.${ext}`;
+  const uploadUrl = mode === 'r2' ? await presignUpload(path, input.type) : undefined;
+  return { path, url: publicUrl(path), uploadUrl, mode };
+}
 
 export async function createSocialPost(input: { caption: string; media: MediaFile[]; platforms: Platform[]; contentItemId?: string | null }): Promise<{ error?: string; id?: string }> {
   const { supabase, member } = await requireMember();
@@ -18,10 +37,9 @@ export async function createSocialPost(input: { caption: string; media: MediaFil
   const platforms = Array.from(new Set(input.platforms)).filter((p) => PLATFORMS.includes(p));
   if (platforms.length === 0) return { error: 'Pick at least one platform.' };
   const caption = input.caption.trim().slice(0, 2200);
-  const prefix = `${SUPABASE}/storage/v1/object/public/social/`;
-  // Only accept files that live in our own bucket.
+  // Only accept files that live in our own storage.
   const media = (input.media ?? []).filter(
-    (m) => m && typeof m.path === 'string' && m.url === prefix + m.path.split('/').map(encodeURIComponent).join('/') && (m.type === 'image' || m.type === 'video') && Number(m.size) > 0,
+    (m) => m && typeof m.path === 'string' && typeof m.url === 'string' && isOurUrl(m.path, m.url) && (m.type === 'image' || m.type === 'video') && Number(m.size) > 0,
   );
   if (media.length === 0) return { error: 'Add at least one photo or video.' };
 
@@ -52,6 +70,9 @@ export async function retryTarget(form: FormData) {
   const { member } = await requireMember();
   if (!canPostSocial(member)) return;
   const db = createAdminClient();
+  const { data: t } = await db.from('social_post_targets').select('post_id').eq('id', String(form.get('id'))).maybeSingle();
+  const { data: post } = t ? await db.from('social_posts').select('media_deleted_at').eq('id', t.post_id).maybeSingle() : { data: null };
+  if (!post || post.media_deleted_at) redirect(`/social?error=${encodeURIComponent('The files for this post were cleared after 7 days. Start a new post to try again.')}`);
   await db
     .from('social_post_targets')
     .update({ status: 'pending', state: {}, error: null, attempts: 0, updated_at: new Date().toISOString() })

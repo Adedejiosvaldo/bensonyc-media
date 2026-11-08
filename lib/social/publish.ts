@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { deleteMedia } from '@/lib/storage';
 import { getAccount } from './accounts';
 import { igContainerStatus, igCreateCarousel, igCreateContainers, igPublish } from './instagram';
 import { ttInitPhotos, ttInitVideo, ttStatus, ttUploadChunk } from './tiktok';
@@ -107,7 +108,38 @@ export async function advanceTarget(target: SocialTarget): Promise<SocialTarget>
     const { data: item } = await db.from('content_items').select('link').eq('id', post.content_item_id).maybeSingle();
     await db.from('content_items').update({ status: 'posted', ...(item?.link ? {} : { link: step.permalink ?? null }) }).eq('id', post.content_item_id);
   }
+  if (step.status === 'published' || step.status === 'sent_to_drafts') await cleanupPost(claimed.post_id).catch(() => {});
   return saved ?? claimed;
+}
+
+/** Files are only needed until every platform has its own copy. */
+const DONE: SocialTarget['status'][] = ['published', 'sent_to_drafts'];
+
+/**
+ * Delete a post's files from storage once every platform has them,
+ * or after `maxAgeDays` whatever happened (so failed posts don't pile up).
+ */
+export async function cleanupPost(postId: string, maxAgeDays = 7) {
+  const db = createAdminClient();
+  const { data: post } = await db.from('social_posts').select('*').eq('id', postId).maybeSingle<SocialPost>();
+  if (!post || post.media_deleted_at || post.media.length === 0) return false;
+  const { data: targets } = await db.from('social_post_targets').select('status').eq('post_id', postId);
+  const allDone = (targets ?? []).length > 0 && (targets ?? []).every((t) => DONE.includes(t.status));
+  const old = Date.now() - new Date(post.created_at).getTime() > maxAgeDays * 86_400_000;
+  const busy = (targets ?? []).some((t) => t.status === 'pending' || t.status === 'processing');
+  if (!allDone && !(old && !busy)) return false;
+  await deleteMedia(post.media);
+  await db.from('social_posts').update({ media_deleted_at: new Date().toISOString() }).eq('id', postId);
+  return true;
+}
+
+/** Daily sweep for posts whose files are still in storage. */
+export async function cleanupAll() {
+  const db = createAdminClient();
+  const { data } = await db.from('social_posts').select('id').is('media_deleted_at', null).order('created_at').limit(50);
+  let n = 0;
+  for (const p of data ?? []) if (await cleanupPost(p.id).catch(() => false)) n++;
+  return n;
 }
 
 /** Advance every unfinished target a little, within a time budget. */

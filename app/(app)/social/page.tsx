@@ -7,6 +7,7 @@ import { Icon } from '@/components/Icon';
 import { listConnections } from '@/lib/social/accounts';
 import { igConfigured } from '@/lib/social/instagram';
 import { ttConfigured, ttMode } from '@/lib/social/tiktok';
+import { storageMode } from '@/lib/storage';
 import { label, todayLagos, weekStart } from '@/lib/dates';
 import { PLATFORM_NAME, type Platform, type SocialPost, type SocialTarget, type TargetStatus } from '@/lib/social/types';
 import type { ContentItem, Member } from '@/lib/types';
@@ -69,6 +70,7 @@ export default async function SocialPage({ searchParams }: { searchParams: { not
             <Composer
               connected={connected}
               tiktokMode={ttMode()}
+              storage={storageMode()}
               items={(items ?? []).map((i) => ({ id: i.id, label: `${label(i.day, 'day')} · ${i.series}: ${i.title}` }))}
             />
           )}
@@ -122,8 +124,10 @@ export default async function SocialPage({ searchParams }: { searchParams: { not
               const ts = (targets ?? []).filter((t) => t.post_id === p.id);
               return (
                 <li key={p.id} className="flex gap-4 py-4">
-                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-plum-100">
-                    {first?.type === 'image' ? (
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-plum-100 text-muted">
+                    {p.media_deleted_at ? (
+                      <Icon name={first?.type === 'video' ? 'content' : 'brand'} className="h-6 w-6" />
+                    ) : first?.type === 'image' ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={first.url} alt="" className="h-full w-full object-cover" />
                     ) : first ? (
@@ -133,14 +137,14 @@ export default async function SocialPage({ searchParams }: { searchParams: { not
                   <div className="min-w-0 flex-1">
                     <p className="line-clamp-2 text-sm font-semibold">{p.caption || <span className="text-muted">No caption</span>}</p>
                     <p className="mt-0.5 text-xs text-muted">
-                      {nameOf.get(p.created_by ?? '') ?? 'Someone'} · {label(p.created_at.slice(0, 10))} · {p.media.length} {p.media.length === 1 ? 'file' : 'files'}
+                      {nameOf.get(p.created_by ?? '') ?? 'Someone'} · {label(p.created_at.slice(0, 10))} · {p.media.length} {p.media.length === 1 ? 'file' : 'files'}{p.media_deleted_at ? ' · cleared from storage' : ''}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {ts.map((t) => (
                         <div key={t.id} className="flex flex-wrap items-center gap-2">
                           <span className={`chip ${STATUS[t.status].cls}`}>{PLATFORM_NAME[t.platform]} · {STATUS[t.status].text}</span>
                           {t.permalink && <a href={t.permalink} target="_blank" rel="noreferrer" className="text-xs font-bold text-magenta">View →</a>}
-                          {t.status === 'failed' && poster && (
+                          {t.status === 'failed' && poster && !p.media_deleted_at && (
                             <form action={retryTarget}>
                               <input type="hidden" name="id" value={t.id} />
                               <SubmitButton className="text-xs font-bold text-magenta hover:underline" pendingText="…">Retry</SubmitButton>

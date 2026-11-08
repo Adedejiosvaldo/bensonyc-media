@@ -22,7 +22,7 @@ The web app for the MFM Benson Youth Church media unit. It covers onboarding, th
 | Calendar `/api/calendar/<token>` | Anyone with the secret link | Read-only iCalendar feed for one member. Reset the link on Availability to cut off an old one |
 | Post `/social` | Heads, admins, Social Media team | Upload photos or a video once and it goes to **Instagram and TikTok**. Several photos become a carousel. Link it to an item on the weekly board and that item is marked posted with the link filled in. Admins connect the accounts here |
 | Insights `/insights` | Members | Followers per platform with 7- and 30-day change, combined followers vs this month's plan target, views/likes/comments/shares for the last 30 days, and every recent post ranked by engagement or views |
-| Cron `/api/cron/social` | Vercel, daily 6am Lagos | Finishes any half-done uploads, refreshes logins and pulls the latest numbers |
+| Cron `/api/cron/social` | Vercel, daily 6am Lagos | Finishes any half-done uploads, clears posted files from storage, refreshes logins and pulls the latest numbers |
 | Cron `/api/cron/reminders` | Vercel | Saturday 4pm Lagos: emails each person on tomorrow's roster their duty, checklist and the content they own |
 
 ### How the weekly board comes from the master plan
@@ -61,13 +61,27 @@ curl -H "Authorization: Bearer $CRON_SECRET" "https://YOUR-SITE/api/cron/reminde
 
 ## Social posting (Instagram + TikTok)
 
-Run `supabase/migrations/0003_social_publishing.sql` first. It adds the tables and a public `social` storage bucket (Instagram and TikTok download the files from there).
+Run `supabase/migrations/0003_social_publishing.sql` and `0004_media_cleanup.sql` first. Then set up media storage (below).
 
 **What to expect from each platform**
 - **Instagram** posts go live straight away. The account must be a **Professional account (Business or Creator)**. Because the app only posts to the unit's own account, you can keep the Meta app in development mode and add the account as a tester; App Review isn't needed for that.
 - **TikTok** lets an app post publicly only after TikTok audits it. Until then, the app sends videos to the account's **TikTok drafts** (`TIKTOK_POST_MODE=inbox`): open TikTok on the unit phone, paste the caption, add a sound and tap Post. After the audit passes, set `TIKTOK_POST_MODE=direct`.
 - **Photos on TikTok** are pulled from a URL, and TikTok only pulls from domains you've verified. Verify your site's domain (or the `https://YOUR-SITE/api/media/` URL prefix) in the TikTok developer portal. Videos are pushed directly, so they don't need this.
-- Supabase's free plan caps uploads at **50 MB per file**. Compress longer videos or upgrade.
+- Files are **deleted from storage automatically** once a post is live on every platform you picked (Instagram and TikTok keep their own copies). If a platform fails, the files are kept 7 days so you can retry, then cleared.
+
+**Media storage: Cloudflare R2 (recommended)**
+
+Instagram and TikTok download each file from a public link, so the files need a home. R2's free plan gives 10 GB, files up to 5 GB, and free downloads. Without R2 the app falls back to Supabase storage (50 MB per file, 1 GB total, 5 GB downloads a month).
+1. dash.cloudflare.com → **R2** → Create bucket, e.g. `bensonyc-media`.
+2. Bucket → Settings → **Public access**: connect a custom domain such as `media.yourdomain.com` (best), or turn on the r2.dev URL. Put that URL in `R2_PUBLIC_URL`.
+3. Bucket → Settings → **CORS policy**, so phones can upload straight to it:
+   ```json
+   [{ "AllowedOrigins": ["https://YOUR-SITE"], "AllowedMethods": ["PUT"], "AllowedHeaders": ["Content-Type"], "MaxAgeSeconds": 3600 }]
+   ```
+4. Bucket → Settings → **Object lifecycle rules**: add "delete objects after 14 days" as a safety net for uploads that were never posted.
+5. R2 → **Manage API tokens** → Create token with *Object Read & Write* on this bucket only. Put the Access Key ID and Secret in `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`, and your account ID (shown on the R2 page) in `R2_ACCOUNT_ID`.
+
+With R2 on a custom domain, you can verify that domain with TikTok for photo posts instead of the `/api/media/` prefix.
 
 **Instagram setup**
 1. developers.facebook.com → Create app → add the **Instagram** product → *API setup with Instagram login*.

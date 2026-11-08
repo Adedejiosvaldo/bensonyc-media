@@ -24,6 +24,7 @@ export type SocialPost = {
   media: MediaFile[];
   content_item_id: string | null;
   created_at: string;
+  media_deleted_at: string | null;
 };
 
 export type SocialTarget = {
