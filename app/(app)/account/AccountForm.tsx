@@ -16,7 +16,7 @@ export function AccountForm() {
         <input id="confirm" name="confirm" type="password" required minLength={8} autoComplete="new-password" placeholder="Type it again" className="input" />
       </div>
       {state && (
-        <p className={`text-sm font-semibold ${state.ok ? 'text-good' : 'text-magenta'}`}>{state.message}</p>
+        <p role={state.ok ? 'status' : 'alert'} className={state.ok ? 'alert-good' : 'alert-danger'}>{state.message}</p>
       )}
       <SubmitButton className="btn-primary w-full py-3" pendingText="Saving…">Save password</SubmitButton>
     </form>

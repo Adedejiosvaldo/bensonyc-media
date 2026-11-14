@@ -26,7 +26,11 @@ export function BlockoutForm({ today }: { today: string }) {
         <label htmlFor="reason" className="label">Reason <span className="font-normal text-muted">(optional, your team sees it)</span></label>
         <input id="reason" name="reason" maxLength={120} placeholder="Exams, travelling, family event…" className="input" />
       </div>
-      {state && <p className={`text-sm font-semibold ${state.ok ? 'text-good' : 'text-magenta'}`}>{state.message}</p>}
+      {state && (
+        <p role={state.ok ? 'status' : 'alert'} className={state.ok ? 'alert-good' : 'alert-danger'}>
+          {state.message}
+        </p>
+      )}
       <SubmitButton className="btn-primary w-full py-3" pendingText="Saving…">Block these dates</SubmitButton>
     </form>
   );

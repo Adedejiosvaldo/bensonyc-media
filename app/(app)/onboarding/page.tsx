@@ -21,13 +21,13 @@ export default async function Onboarding({ searchParams }: { searchParams: { don
   return (
     <div>
       <PageHeader eyebrow="Media unit course" title="Onboarding" actions={next && <Link href={`/onboarding/${next.slug}`} className="btn-primary">{count ? 'Continue' : 'Start'} <Icon name="arrow" className="h-4 w-4" /></Link>}>
-        Six short lessons. Finish all of them and sign the pledge before your first duty.
+        {LESSONS.length} short lessons. Finish all of them and sign the pledge before your first duty.
       </PageHeader>
 
       {(complete || searchParams.done) && (
-        <div className="mb-6 flex items-center gap-4 rounded-[24px] bg-good/10 p-5 text-good">
+        <div className="mb-6 flex items-center gap-4 rounded-[24px] bg-good/10 p-5 text-good-ink">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-good text-white"><Icon name="check" /></span>
-          <div><p className="font-display text-2xl uppercase">Onboarding complete</p><p className="text-sm text-ink/70">Welcome to the team. Check Home for your next duty.</p></div>
+          <div><h2 className="card-title">Onboarding complete</h2><p className="text-sm text-ink/70">Welcome to the team. Check Home for your next duty.</p></div>
         </div>
       )}
 
@@ -41,7 +41,7 @@ export default async function Onboarding({ searchParams }: { searchParams: { don
           const isDone = done.has(l.slug);
           return (
             <li key={l.slug}>
-              <Link href={`/onboarding/${l.slug}`} className="card group flex h-full gap-4 p-5 transition hover:-translate-y-0.5 hover:border-magenta/40">
+              <Link href={`/onboarding/${l.slug}`} className="card group flex h-full gap-4 p-5 transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-magenta/40">
                 <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl font-display text-xl ${isDone ? 'bg-good text-white' : 'bg-plum-700 text-white'}`}>
                   {isDone ? <Icon name="check" /> : i + 1}
                 </span>
@@ -50,7 +50,7 @@ export default async function Onboarding({ searchParams }: { searchParams: { don
                   <p className="mt-1 text-sm text-muted">{l.summary}</p>
                   <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-muted">{l.minutes} min</p>
                 </div>
-                <Icon name="arrow" className="h-5 w-5 self-center text-muted transition group-hover:translate-x-1 group-hover:text-magenta" />
+                <Icon name="arrow" className="h-5 w-5 self-center text-muted transition-transform duration-200 ease-out group-hover:translate-x-1 group-hover:text-accent" />
               </Link>
             </li>
           );

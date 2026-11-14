@@ -20,12 +20,12 @@ export default async function RulesPage() {
       <PledgeForm name={member.full_name} signedAt={pledge?.agreed_at ?? null} />
       <section className="card p-6">
         <div className="mb-4 flex items-baseline justify-between">
-          <p className="font-display text-2xl uppercase">Signed</p>
+          <h2 className="card-title">Signed</h2>
           <p className="text-sm font-bold text-muted">{rows.length} of {count ?? '–'} members</p>
         </div>
         <ul className="flex flex-wrap gap-2">
           {rows.map((r) => (
-            <li key={r.member_id} className="chip bg-good/15 normal-case tracking-normal text-good">{r.members?.full_name ?? 'Member'}</li>
+            <li key={r.member_id} className="chip bg-good/15 normal-case tracking-normal text-good-ink">{r.members?.full_name ?? 'Member'}</li>
           ))}
           {rows.length === 0 && <li className="text-muted">Nobody has signed yet.</li>}
         </ul>

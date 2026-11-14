@@ -27,7 +27,7 @@ export default async function LessonPage({ params }: { params: { slug: string } 
   return (
     <div className="grid gap-8 xl:grid-cols-[1fr_260px]">
       <article className="min-w-0">
-        <Link href="/onboarding" className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-muted hover:text-magenta"><Icon name="back" className="h-4 w-4" /> All lessons</Link>
+        <Link href="/onboarding" className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-muted hover:text-accent"><Icon name="back" className="h-4 w-4" /> All lessons</Link>
         <p className="eyebrow mb-2">Lesson {index + 1} of {LESSONS.length} · {lesson.minutes} min</p>
         <h1 className="mb-8 font-display text-4xl uppercase leading-[0.95] sm:text-6xl">{lesson.title}</h1>
 
@@ -44,7 +44,7 @@ export default async function LessonPage({ params }: { params: { slug: string } 
             <p className="text-lg">You are in <b>{dept.name}</b>. {dept.tagline}</p>
             <DepartmentView dept={dept} />
             <p className="text-sm text-muted">
-              Want to see the other teams? <Link href="/departments" className="font-bold text-magenta">All departments →</Link>
+              Want to see the other teams? <Link href="/departments" className="link">All departments →</Link>
             </p>
           </div>
         )}
@@ -89,7 +89,7 @@ export default async function LessonPage({ params }: { params: { slug: string } 
 
 function Welcome({ name }: { name: string }) {
   const stats = [
-    { n: '774', l: 'Instagram followers today' },
+    { n: '774', l: 'Instagram followers when the plan began' },
     { n: '10,000', l: 'our goal by July 2027' },
     { n: '5', l: 'departments, one team' },
   ];
@@ -99,21 +99,21 @@ function Welcome({ name }: { name: string }) {
       <div className="grid gap-3 sm:grid-cols-3">
         {stats.map((s) => (
           <div key={s.l} className="card p-5">
-            <p className="font-display text-5xl text-magenta">{s.n}</p>
+            <p className="font-display text-5xl text-accent">{s.n}</p>
             <p className="mt-1 text-sm text-muted">{s.l}</p>
           </div>
         ))}
       </div>
       <div className="card space-y-3 p-6">
-        <p className="font-display text-2xl uppercase">What the media unit does</p>
+        <h2 className="card-title">What the media unit does</h2>
         <p>We set up the screens, capture the service, design what the church sees, create content that travels, and look after our online community on WhatsApp, Instagram and Facebook.</p>
         <p>WhatsApp is where our people are. Instagram is where new people find us. Over the next nine months we will grow our Instagram from 774 to 10,000 by posting real faces, real testimonies and real teaching, consistently.</p>
       </div>
       <div className="card space-y-3 p-6">
-        <p className="font-display text-2xl uppercase">What we expect from you</p>
+        <h2 className="card-title">What we expect from you</h2>
         <ul className="space-y-2">
           {['Show up on time: 7:30am, grace till 8:00', 'Do your duty on the roster, or find a swap by Friday', 'Follow the brand guide on everything you make', 'Bring one idea a week'].map((t) => (
-            <li key={t} className="flex gap-2"><Icon name="check" className="mt-1 h-4 w-4 shrink-0 text-magenta" />{t}</li>
+            <li key={t} className="flex gap-2"><Icon name="check" className="mt-1 h-4 w-4 shrink-0 text-accent" />{t}</li>
           ))}
         </ul>
       </div>
@@ -141,12 +141,12 @@ function Workflow() {
         ))}
       </div>
       <div>
-        <p className="mb-3 font-display text-2xl uppercase">The weekly rhythm</p>
+        <h2 className="mb-3 card-title">The weekly rhythm</h2>
         <WeeklyRhythm />
         <p className="mt-3 text-sm text-muted">Every other Friday, Friday Fire becomes the Kingdom Business Minute: a 60–90s business talk from a member. Each week also gets one “monthly hero” post on Thursday.</p>
       </div>
       <div className="card p-6">
-        <p className="font-display text-2xl uppercase">How the roster is fair</p>
+        <h2 className="card-title">How the roster is fair</h2>
         <p className="mt-2 text-muted">The roster gives duties to whoever has served least in the last 8 weeks. The two Sunday camera halves always go to different people, so nobody gets tired. Anyone on a break is skipped until their break ends.</p>
       </div>
     </div>

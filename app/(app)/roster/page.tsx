@@ -6,6 +6,8 @@ import { Icon } from '@/components/Icon';
 import { SubmitButton } from '@/components/SubmitButton';
 import { CopyButton } from '@/components/CopyButton';
 import { AutoSubmitSelect } from '@/components/AutoSubmitSelect';
+import { ConfirmSubmit } from '@/components/ConfirmSubmit';
+import { EmptyState } from '@/components/EmptyState';
 import { DEPARTMENTS } from '@/content/departments';
 import { addDays, isValidDate, label, parse, rangeLabel, todayLagos, weekStart } from '@/lib/dates';
 import { whatsappRoster } from '@/lib/messages';
@@ -49,19 +51,19 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
         title={rangeLabel(sunday)}
         actions={
           <div className="flex items-center gap-2">
-            <Link href={`/roster?week=${addDays(sunday, -7)}`} className="btn-ghost px-3" aria-label="Previous week"><Icon name="back" className="h-4 w-4" /></Link>
-            <Link href={`/roster?week=${addDays(sunday, 7)}`} className="btn-ghost px-3" aria-label="Next week"><Icon name="arrow" className="h-4 w-4" /></Link>
+            <Link href={`/roster?week=${addDays(sunday, -7)}`} className="btn-icon btn-ghost" aria-label="Previous week"><Icon name="back" className="h-4 w-4" /></Link>
+            <Link href={`/roster?week=${addDays(sunday, 7)}`} className="btn-icon btn-ghost" aria-label="Next week"><Icon name="arrow" className="h-4 w-4" /></Link>
           </div>
         }
       >
-        In by 7:30am, grace till 8:00. Can’t make it? Tap <b>Ask for a swap</b> on your duty and anyone in your department can take it. Planning ahead? <Link href="/availability" className="font-bold text-magenta">Block out dates</Link>.
+        In by 7:30am, grace till 8:00. Can’t make it? Tap <b>Ask for a swap</b> on your duty and anyone in your department can take it. Planning ahead? <Link href="/availability" className="link">Block out dates</Link>.
       </PageHeader>
 
       {searchParams.notice && (
-        <p role="status" className="rounded-2xl bg-plum-100 p-4 text-sm font-semibold">{searchParams.notice}</p>
+        <p role="status" className="alert-good">{searchParams.notice}</p>
       )}
       {openCount > 0 && (
-        <p className="flex items-center gap-2 rounded-2xl bg-gold/15 p-4 text-sm font-semibold">
+        <p className="flex items-center gap-2 rounded-2xl border border-gold/40 bg-gold/15 p-4 text-sm font-semibold text-warn-ink">
           <Icon name="swap" className="h-4 w-4 shrink-0" />
           {openCount === 1 ? '1 duty needs cover this week.' : `${openCount} duties need cover this week.`} Look for the gold cards below.
         </p>
@@ -80,25 +82,42 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
           <div className="flex flex-wrap items-center gap-4 text-sm font-semibold lg:ml-auto">
             <label className="flex items-center gap-2"><input type="checkbox" name="special" className="h-4 w-4 accent-[rgb(var(--magenta))]" /> Special service (+ phone camera)</label>
             <label className="flex items-center gap-2"><input type="checkbox" name="midweek" className="h-4 w-4 accent-[rgb(var(--magenta))]" /> Midweek service on</label>
-            <select name="midweek_day" defaultValue="3" className="rounded-lg border border-line bg-card px-2 py-1.5" aria-label="Midweek day">
+            <select name="midweek_day" defaultValue="3" className="select-sm" aria-label="Midweek service day">
               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => <option key={d} value={i + 1}>{d}</option>)}
             </select>
-            <SubmitButton pendingText="Shuffling…">{week ? 'Reshuffle' : 'Generate roster'}</SubmitButton>
+            {week ? (
+              <ConfirmSubmit
+                pendingText="Shuffling…"
+                title={`Reshuffle ${rangeLabel(sunday)}?`}
+                body={
+                  <>
+                    This replaces all {(slots ?? []).length} duties for the week with a fresh fair rotation, including names you set by hand
+                    {coveredSwap.size || openCount ? ` and ${coveredSwap.size + openCount} swap${coveredSwap.size + openCount === 1 ? '' : 's'} in progress` : ''}. Everyone sees the new roster straight away.
+                  </>
+                }
+                confirmLabel="Reshuffle the week"
+              >
+                Reshuffle
+              </ConfirmSubmit>
+            ) : (
+              <SubmitButton pendingText="Building…">Generate roster</SubmitButton>
+            )}
           </div>
         </form>
       )}
 
       {!week ? (
-        <div className="card p-10 text-center">
-          <p className="font-display text-3xl uppercase">No roster yet</p>
-          <p className="mt-2 text-muted">{lead ? 'Generate it above, ideally on Monday.' : 'Your unit lead publishes it on Monday.'}</p>
+        <div className="card">
+          <EmptyState icon="roster" title="No roster for this week yet">
+            {lead ? 'Generate it above, ideally on Monday, so the team has the week to plan.' : 'Your unit lead publishes it on Monday. You’ll see your duty on Home once it’s out.'}
+          </EmptyState>
         </div>
       ) : (
         <>
           {services.map((svc) => (
             <section key={svc.date + svc.label}>
               <div className="mb-3 flex items-baseline gap-3">
-                <h2 className="font-display text-3xl uppercase">{svc.label}</h2>
+                <h2 className="section-title">{svc.label}</h2>
                 <p className="font-semibold text-muted">{label(svc.date, 'long')}</p>
               </div>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -108,7 +127,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
                   const options = [{ value: '', label: '— Needs someone —' }, ...(members ?? []).filter((m) => m.department_id === d.id && m.status !== 'inactive').map((m) => ({ value: m.id, label: m.full_name }))];
                   return (
                     <div key={d.id} className="card p-5">
-                      <p className="eyebrow mb-3">{d.name}</p>
+                      <p className="overline mb-3">{d.name}</p>
                       <ul className="space-y-3">
                         {rows.map((s) => {
                           const mine = s.member_id === member.id;
@@ -123,15 +142,15 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
                               <div className="flex items-center gap-2">
                                 <p className="text-xs font-semibold text-muted">{s.duty}</p>
                                 {swap && <span className="chip ml-auto bg-gold text-plum-950">Needs cover</span>}
-                                {!swap && blocked && <span className="chip ml-auto bg-magenta/15 text-magenta">Away</span>}
+                                {!swap && blocked && <span className="chip ml-auto bg-plum-100 text-ink"><Icon name="calendarOff" className="h-3 w-3" /> Away</span>}
                               </div>
                               {lead ? (
                                 <form action={assignSlot} className="mt-1.5">
                                   <input type="hidden" name="id" value={s.id} />
-                                  <AutoSubmitSelect name="member_id" label={s.duty} defaultValue={s.member_id ?? ''} options={opts} className="text-sm" />
+                                  <AutoSubmitSelect name="member_id" label={`Who’s on ${s.duty}, ${svc.label}`} defaultValue={s.member_id ?? ''} options={opts} />
                                 </form>
                               ) : (
-                                <p className={`mt-0.5 font-bold ${s.member_id ? '' : 'text-magenta'}`}>{s.member_id ? nameOf.get(s.member_id) : 'Needs someone'}{mine ? ' (you)' : ''}</p>
+                                <p className={`mt-0.5 font-bold ${s.member_id ? '' : 'text-accent'}`}>{s.member_id ? nameOf.get(s.member_id) : 'Needs someone'}{mine ? ' (you)' : ''}</p>
                               )}
                               {swap?.note && <p className="mt-1 text-sm italic text-muted">“{swap.note}”</p>}
                               {covered && !swap && covered.to_member === s.member_id && (
@@ -147,12 +166,12 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
                               {upcoming && swap && (mine || lead) && (
                                 <form action={cancelSwap} className="mt-2">
                                   <input type="hidden" name="swap_id" value={swap.id} />
-                                  <SubmitButton className="text-xs font-bold text-magenta hover:underline" pendingText="Cancelling…">{mine ? 'I can make it after all' : 'Cancel swap request'}</SubmitButton>
+                                  <SubmitButton className="link min-h-9 text-xs" pendingText="Cancelling…">{mine ? 'I can make it after all' : 'Cancel swap request'}</SubmitButton>
                                 </form>
                               )}
                               {upcoming && mine && !swap && (
                                 <details className="mt-2 group">
-                                  <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs font-bold text-magenta">
+                                  <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1.5 text-xs font-bold text-accent [&::-webkit-details-marker]:hidden">
                                     <Icon name="swap" className="h-3.5 w-3.5" /> Ask for a swap
                                   </summary>
                                   <form action={requestSwap} className="mt-2 space-y-2">
@@ -177,7 +196,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
           <section className="card overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-5">
               <div>
-                <p className="font-display text-2xl uppercase">WhatsApp message</p>
+                <h2 className="card-title">WhatsApp message</h2>
                 <p className="text-sm text-muted">Paste this into the media group on Saturday.</p>
               </div>
               <CopyButton text={message} label="Copy message" />

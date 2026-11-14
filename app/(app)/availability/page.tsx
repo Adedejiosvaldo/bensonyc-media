@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { CopyButton } from '@/components/CopyButton';
 import { SubmitButton } from '@/components/SubmitButton';
 import { Icon } from '@/components/Icon';
+import { ConfirmSubmit } from '@/components/ConfirmSubmit';
 import { departmentById } from '@/content/departments';
 import { addDays, label, todayLagos } from '@/lib/dates';
 import type { Blockout, Member } from '@/lib/types';
@@ -50,14 +51,14 @@ export default async function AvailabilityPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="card p-6">
-          <p className="eyebrow mb-1">Can’t make it?</p>
-          <p className="mb-5 font-display text-2xl uppercase">Block out dates</p>
+          <p className="overline mb-1">Can’t make it?</p>
+          <h2 className="mb-5 card-title">Block out dates</h2>
           <BlockoutForm today={today} />
         </section>
 
         <section className="card p-6">
-          <p className="eyebrow mb-1">Coming up</p>
-          <p className="mb-4 font-display text-2xl uppercase">Your blocked dates</p>
+          <p className="overline mb-1">Coming up</p>
+          <h2 className="mb-4 card-title">Your blocked dates</h2>
           {mine && mine.length > 0 ? (
             <ul className="space-y-2">
               {mine.map((b) => (
@@ -69,7 +70,7 @@ export default async function AvailabilityPage() {
                   </div>
                   <form action={deleteBlockout}>
                     <input type="hidden" name="id" value={b.id} />
-                    <SubmitButton className="btn-ghost px-3 py-1.5 text-xs" pendingText="…">Remove</SubmitButton>
+                    <SubmitButton className="btn-ghost px-3 py-1.5 text-xs" pendingText="Removing…">Remove<span className="sr-only"> {range(b)}</span></SubmitButton>
                   </form>
                 </li>
               ))}
@@ -85,30 +86,38 @@ export default async function AvailabilityPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-magenta text-white"><Icon name="calendar" /></span>
           <div className="min-w-0 flex-1">
-            <p className="font-display text-2xl uppercase">Add duties to your calendar</p>
+            <h2 className="card-title">Add duties to your calendar</h2>
             <p className="mt-1 text-sm text-muted">Your roster duties and the content you own show up in Google, Apple or Outlook calendar and update by themselves. Keep this link private.</p>
             {feed ? (
               <>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <a href={google} target="_blank" rel="noreferrer" className="btn-primary">Google Calendar</a>
+                  <a href={google} target="_blank" rel="noreferrer" className="btn-primary">Google Calendar<span className="sr-only"> (opens in a new tab)</span></a>
                   <a href={webcal} className="btn-ghost">Apple / Outlook</a>
                   <CopyButton text={feed} label="Copy link" />
                 </div>
                 <p className="mt-3 break-all rounded-xl bg-plum-100/60 px-3 py-2 font-mono text-xs text-muted">{feed}</p>
                 <form action={resetCalendarToken} className="mt-3">
-                  <SubmitButton className="text-xs font-bold text-magenta underline-offset-2 hover:underline" pendingText="Resetting…">Reset link (old one stops working)</SubmitButton>
+                  <ConfirmSubmit
+                    className="link min-h-9 text-xs"
+                    pendingText="Resetting…"
+                    title="Reset your calendar link?"
+                    body="The old link stops working, so any calendar using it stops updating. You’ll need to add the new link to your phone again."
+                    confirmLabel="Reset link"
+                  >
+                    Reset link
+                  </ConfirmSubmit>
                 </form>
               </>
             ) : (
-              <p className="mt-3 text-sm font-semibold text-magenta">Calendar link isn’t ready. Ask an admin to run the latest database migration.</p>
+              <p role="status" className="alert-danger mt-3">Your calendar link isn’t ready yet. Tell an admin so they can switch it on.</p>
             )}
           </div>
         </div>
       </section>
 
       <section className="card p-6">
-        <p className="eyebrow mb-1">Next 6 weeks</p>
-        <p className="mb-4 font-display text-2xl uppercase">Who’s away</p>
+        <p className="overline mb-1">Next 6 weeks</p>
+        <h2 className="mb-4 card-title">Who’s away</h2>
         {(team ?? []).length === 0 ? (
           <p className="text-muted">Nobody has blocked out dates yet.</p>
         ) : (
