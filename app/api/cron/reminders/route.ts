@@ -20,11 +20,12 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient();
   const sunday = addDays(weekStart(todayLagos()), 7);
 
-  const { data: week } = await supabase.from('roster_weeks').select('id').eq('week_start', sunday).maybeSingle();
+  const { data: week } = await supabase.from('roster_weeks').select('id, published_at').eq('week_start', sunday).maybeSingle();
   if (!week) return NextResponse.json({ sent: 0, note: `No roster for ${sunday}` });
+  if (!week.published_at) return NextResponse.json({ sent: 0, note: `The roster for ${sunday} is still a draft` });
 
   const [{ data: slots }, { data: members }, { data: items }] = await Promise.all([
-    supabase.from('roster_slots').select('*').eq('week_id', week.id).not('member_id', 'is', null).order('sort').returns<RosterSlot[]>(),
+    supabase.from('roster_slots').select('*').eq('week_id', week.id).not('member_id', 'is', null).neq('response', 'declined').order('sort').returns<RosterSlot[]>(),
     supabase.from('members').select('*').returns<Member[]>(),
     supabase.from('content_items').select('*').eq('week_start', sunday).returns<ContentItem[]>(),
   ]);
@@ -69,6 +70,6 @@ function emailHtml(p: { name: string; sunday: string; duties: RosterSlot[]; chec
     <p style="margin:20px 0 0;font-size:14px;color:#6e5e70">Ladies: no nails, earrings or necklaces. Men: well dressed, no slippers. Go down to church as soon as service starts.</p>
     ${p.site ? `<p style="margin:20px 0 0"><a href="${p.site}/home" style="background:#d6197a;color:#fff;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:bold;display:inline-block">Open the media app</a></p>` : ''}
   </div>
-  <p style="text-align:center;font-size:12px;color:#8a7a8c;margin-top:16px">Can't make it? Swap with someone in your department and tell your head today.</p>
+  <p style="text-align:center;font-size:12px;color:#8a7a8c;margin-top:16px">Can't make it? Open the app and tap Can't make it so your department can cover you.</p>
 </div></body></html>`;
 }

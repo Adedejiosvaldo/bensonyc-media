@@ -1,9 +1,11 @@
 import Link from 'next/link';
-import { requireMember } from '@/lib/auth';
+import { isLead, requireMember } from '@/lib/auth';
 import { LESSONS } from '@/content/lessons';
 import { departmentById } from '@/content/departments';
 import { Icon } from '@/components/Icon';
 import { EmptyState } from '@/components/EmptyState';
+import { DutyReply } from '@/components/DutyReply';
+import { deadlineLabel } from '@/lib/roster-notify';
 import { Ring } from '@/components/Progress';
 import { StatusChip, PILLAR_STYLE } from '@/components/StatusChip';
 import { addDays, label, monthStart, parse, todayLagos, weekStart } from '@/lib/dates';
@@ -17,15 +19,17 @@ export default async function Home() {
   const upcomingSunday = parse(today).getUTCDay() === 0 ? today : addDays(weekStart(today), 7);
   const thisWeek = weekStart(today);
 
-  const [{ data: progress }, { data: pledge }, { data: week }, { data: myItems }, { data: weekItems }, { data: month }] = await Promise.all([
+  const [{ data: progress }, { data: pledge }, { data: rosterWeek }, { data: myItems }, { data: weekItems }, { data: month }] = await Promise.all([
     supabase.from('lesson_progress').select('lesson_slug').eq('member_id', member.id),
     supabase.from('pledges').select('agreed_at').eq('member_id', member.id).maybeSingle(),
-    supabase.from('roster_weeks').select('id').eq('week_start', upcomingSunday).maybeSingle(),
+    supabase.from('roster_weeks').select('id, published_at, deadline').eq('week_start', upcomingSunday).maybeSingle(),
     supabase.from('content_items').select('*').eq('owner_id', member.id).gte('day', today).order('day').limit(6).returns<ContentItem[]>(),
     supabase.from('content_items').select('status').eq('week_start', thisWeek),
     supabase.from('plan_months').select('*').eq('month', monthStart(today)).maybeSingle<PlanMonth>(),
   ]);
 
+  // A draft roster stays with the leads until it's published.
+  const week = rosterWeek && (rosterWeek.published_at || isLead(member)) ? rosterWeek : null;
   const { data: mySlots } = week
     ? await supabase.from('roster_slots').select('*').eq('week_id', week.id).eq('member_id', member.id).order('sort').returns<RosterSlot[]>()
     : { data: [] as RosterSlot[] };
@@ -41,6 +45,7 @@ export default async function Home() {
     : { data: [] as { slot_id: string }[] };
   const waitingCover = new Set((myOpen ?? []).map((w) => w.slot_id));
 
+  const pendingDuties = week?.published_at ? (mySlots ?? []).filter((s) => s.response === 'pending') : [];
   const done = new Set((progress ?? []).map((p) => p.lesson_slug));
   const doneCount = LESSONS.filter((l) => done.has(l.slug)).length;
   const nextLesson = LESSONS.find((l) => !done.has(l.slug));
@@ -72,6 +77,19 @@ export default async function Home() {
           </dl>
         )}
       </header>
+
+      {pendingDuties.length > 0 && (
+        <a href="#duty" className="flex items-center gap-4 rounded-2xl border border-gold/60 bg-gold/15 p-5 transition-colors duration-150 hover:bg-gold/20">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold text-plum-950"><Icon name="roster" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">You’ve been rostered: {pendingDuties.map((d) => d.duty).join(', ')}</span>
+            <span className="block text-sm text-muted">
+              {label(pendingDuties[0].service_date, 'long')}. Please accept or say you can’t make it{deadlineLabel(week?.deadline ?? null) ? ` by ${deadlineLabel(week?.deadline ?? null)}` : ''}.
+            </span>
+          </span>
+          <Icon name="arrow" className="h-4 w-4 shrink-0" />
+        </a>
+      )}
 
       {nextLesson && (
         <Link href={`/onboarding/${nextLesson.slug}`} className="on-dark group relative flex flex-col gap-5 overflow-hidden rounded-[24px] bg-plum-900 p-6 text-white shadow-lift transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-raise sm:flex-row sm:items-center">
@@ -109,7 +127,7 @@ export default async function Home() {
       )}
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-        <section className="card p-6" aria-labelledby="duty-title">
+        <section id="duty" className="card scroll-mt-24 p-6" aria-labelledby="duty-title">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <p className="kicker">Your duty</p>
@@ -120,15 +138,19 @@ export default async function Home() {
           {mySlots && mySlots.length > 0 ? (
             <ul className="space-y-2">
               {mySlots.map((s) => (
-                <li key={s.id} className="card-row flex items-center gap-3">
+                <li key={s.id} className={`card-row flex items-start gap-3 ${s.response === 'pending' && week?.published_at ? 'ring-1 ring-gold/60' : ''}`}>
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-magenta text-white"><Icon name="roster" className="h-5 w-5" /></span>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="font-bold">{s.duty}</p>
                     <p className="text-sm text-muted">{s.service_label} · in by 7:30am</p>
-                    {waitingCover.has(s.id) && (
-                      <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-gold/25 px-2 py-0.5 text-[11px] font-bold text-warn-ink">
-                        <Icon name="swap" className="h-3 w-3" /> Swap requested, waiting for cover
-                      </p>
+                    {week?.published_at ? (
+                      <>
+                        {s.response === 'pending' && deadlineLabel(week.deadline) && <p className="mt-1 text-xs text-muted">Reply by {deadlineLabel(week.deadline)}</p>}
+                        <DutyReply slotId={s.id} response={s.response} reason={s.decline_reason} />
+                        {s.response === 'declined' && waitingCover.has(s.id) && <p className="mt-1.5 text-xs text-muted">Waiting for someone in your department to take it.</p>}
+                      </>
+                    ) : (
+                      <p className="mt-1.5 text-xs font-semibold text-muted">Draft: the team sees this once you publish it on the Roster page.</p>
                     )}
                   </div>
                 </li>

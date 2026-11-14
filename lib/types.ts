@@ -54,6 +54,10 @@ export type RosterSlot = {
   duty: string;
   member_id: string | null;
   sort: number;
+  response: 'pending' | 'accepted' | 'declined';
+  responded_at: string | null;
+  decline_reason: string | null;
+  notified_at: string | null;
 };
 
 export type Blockout = {
