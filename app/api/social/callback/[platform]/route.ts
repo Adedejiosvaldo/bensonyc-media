@@ -13,7 +13,7 @@ export const maxDuration = 60;
 export async function GET(request: NextRequest, { params }: { params: { platform: string } }) {
   const site = siteUrl(request.nextUrl.origin);
   const fail = (msg: string) => {
-    const res = NextResponse.redirect(`${site}/social?error=${encodeURIComponent(msg)}`);
+    const res = NextResponse.redirect(`${site}/admin/accounts?error=${encodeURIComponent(msg)}`);
     res.cookies.delete(STATE_COOKIE);
     return res;
   };
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest, { params }: { params: { platform
   }
 
   await syncStats().catch(() => {});
-  const res = NextResponse.redirect(`${site}/social?notice=${encodeURIComponent(`${PLATFORM_NAME[params.platform]} connected.`)}`);
+  const res = NextResponse.redirect(`${site}/admin/accounts?notice=${encodeURIComponent(`${PLATFORM_NAME[params.platform]} connected.`)}`);
   res.cookies.delete(STATE_COOKIE);
   return res;
 }

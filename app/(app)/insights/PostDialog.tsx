@@ -12,6 +12,7 @@ export type PostDetail = {
   thumbnail: string | null;
   stats: { label: string; value: string; hint?: string }[];
   engagedRate: string | null;
+  versusUsual?: string | null;
 };
 
 /**
@@ -71,7 +72,8 @@ export function PostDialog({ post, closeHref }: { post: PostDetail; closeHref: s
               </div>
             ))}
           </dl>
-          {post.engagedRate && <p className="mt-2 text-xs text-muted">{post.engagedRate} of viewers liked, commented, shared or saved it.</p>}
+          {post.versusUsual && <p className="mt-3 text-sm font-semibold">{post.versusUsual}</p>}
+          {post.engagedRate && <p className="mt-1 text-xs text-muted">{post.engagedRate} of viewers liked, commented, shared or saved it.</p>}
           <p className="mt-1 text-xs text-muted">Totals since it was posted, as of the last refresh.</p>
 
           {post.permalink && (

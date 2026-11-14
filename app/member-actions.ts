@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 import { DEPARTMENTS } from '@/content/departments';
 import { isValidDate } from '@/lib/dates';
-import type { MemberStatus, Role } from '@/lib/types';
+import type { Grant, MemberStatus, Role } from '@/lib/types';
 
 export type MemberFormState = { ok: boolean; message: string } | null;
 
@@ -11,6 +11,7 @@ const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 const ROLES: Role[] = ['member', 'head', 'admin'];
 const STATUSES: MemberStatus[] = ['active', 'on_break', 'inactive'];
 const DEPT_IDS = DEPARTMENTS.map((d) => d.id as string);
+const GRANTS: Grant[] = ['post', 'plan', 'roster'];
 
 /** Read and check the shared member fields. Returns an error message instead of throwing. */
 function readFields(form: FormData) {
@@ -20,6 +21,8 @@ function readFields(form: FormData) {
   const role = str(form, 'role') as Role;
   const status = str(form, 'status') as MemberStatus;
   const breakUntil = str(form, 'break_until');
+  // Admins can do everything, so their switches are ignored and stored empty.
+  const grants = role === 'admin' ? [] : GRANTS.filter((g) => form.getAll('grants').includes(g));
 
   if (full_name.length < 2) return { error: 'Add the member’s name (at least 2 letters).' };
   if (full_name.length > 80) return { error: 'That name is too long. Keep it under 80 characters.' };
@@ -37,6 +40,7 @@ function readFields(form: FormData) {
       role,
       status,
       break_until: status === 'on_break' && breakUntil ? breakUntil : null,
+      grants,
     },
   };
 }

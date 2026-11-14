@@ -10,12 +10,12 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest, { params }: { params: { platform: string } }) {
   const site = siteUrl(request.nextUrl.origin);
   const { member } = await getSession();
-  if (!isAdmin(member)) return NextResponse.redirect(`${site}/social?error=${encodeURIComponent('Only an admin can connect accounts.')}`);
-  if (!isPlatform(params.platform)) return NextResponse.redirect(`${site}/social`);
+  if (!isAdmin(member)) return NextResponse.redirect(`${site}/admin/accounts?error=${encodeURIComponent('Only an admin can connect accounts.')}`);
+  if (!isPlatform(params.platform)) return NextResponse.redirect(`${site}/admin/accounts`);
 
   const configured = params.platform === 'instagram' ? igConfigured() : ttConfigured();
   if (!configured) {
-    return NextResponse.redirect(`${site}/social?error=${encodeURIComponent(`Add the ${params.platform === 'instagram' ? 'INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET' : 'TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET'} environment variables first.`)}`);
+    return NextResponse.redirect(`${site}/admin/accounts?error=${encodeURIComponent(`Add the ${params.platform === 'instagram' ? 'INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET' : 'TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET'} environment variables first.`)}`);
   }
 
   const state = crypto.randomUUID();

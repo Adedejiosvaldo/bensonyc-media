@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { canPostSocial, isAdmin, requireMember } from '@/lib/auth';
-import { disconnectAccount, retryTarget } from '@/app/social-actions';
+import { retryTarget } from '@/app/social-actions';
 import { PageHeader } from '@/components/PageHeader';
 import { SubmitButton } from '@/components/SubmitButton';
 import { Icon } from '@/components/Icon';
@@ -11,7 +11,6 @@ import { storageMode } from '@/lib/storage';
 import { label, todayLagos, weekStart } from '@/lib/dates';
 import { PLATFORM_NAME, type Platform, type SocialPost, type SocialTarget, type TargetStatus } from '@/lib/social/types';
 import type { ContentItem, Member } from '@/lib/types';
-import { ConfirmSubmit } from '@/components/ConfirmSubmit';
 import { EmptyState } from '@/components/EmptyState';
 import { Composer } from './Composer';
 import { Poller } from './Poller';
@@ -62,15 +61,15 @@ export default async function SocialPage({ searchParams }: { searchParams: { not
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <section className={`card p-6 ${!poster || connected.length === 0 ? 'flex items-center justify-center' : ''}`}>
           {!poster ? (
-            <EmptyState icon="eye" title="Posting is for the Social team">
-              Heads, admins and the Social Media department can post. You can still see what’s gone out below, and how it’s doing on Insights.
+            <EmptyState icon="eye" title="Posting needs permission">
+              Ask an admin to turn on <b>Post to socials</b> for you. You can still see what’s gone out below, and how it’s doing on Insights.
             </EmptyState>
           ) : connected.length === 0 ? (
             <EmptyState icon="share" title="Connect an account to start posting">
               {admin
                 ? configured.instagram || configured.tiktok
-                  ? 'Connect Instagram or TikTok in Accounts. Once one is linked, the post composer appears here.'
-                  : 'Instagram and TikTok need their app keys set first (see “Social posting” in the README). Then connect them in Accounts.'
+                  ? 'Connect Instagram or TikTok in Admin → Connected accounts. Once one is linked, the post composer appears here.'
+                  : 'Instagram and TikTok need their app keys set first (see “Social posting” in the README). Then connect them in Admin → Connected accounts.'
                 : 'Ask an admin to connect the unit’s Instagram and TikTok. The post composer appears here once they do.'}
             </EmptyState>
           ) : (
@@ -87,52 +86,27 @@ export default async function SocialPage({ searchParams }: { searchParams: { not
           )}
         </section>
 
-        <section className="card p-6">
-          <p className="kicker mb-1">Accounts</p>
-          <h2 className="mb-4 card-title">{connected.length ? `${connected.length} of 2 connected` : 'Not connected yet'}</h2>
-          <ul className="space-y-3">
+        <section className="card p-6" aria-labelledby="accounts-title">
+          <h2 id="accounts-title" className="card-title">Accounts</h2>
+          <ul className="mt-3 space-y-2">
             {(['instagram', 'tiktok'] as Platform[]).map((p) => {
               const c = connections.find((x) => x.platform === p);
-              const expires = c?.platform === 'tiktok' ? c.refresh_expires_at : c?.token_expires_at;
-              const soon = expires && new Date(expires).getTime() - Date.now() < 7 * 86_400_000;
               return (
-                <li key={p} className="rounded-2xl bg-plum-100/70 p-4">
-                  <div className="flex items-center gap-3">
-                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white ${p === 'instagram' ? 'bg-magenta' : 'bg-plum-700'}`}><Icon name="share" className="h-5 w-5" /></span>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold">{PLATFORM_NAME[p]}</p>
-                      <p className="truncate text-sm text-muted">{c ? (c.username ? `@${c.username}` : 'Connected') : 'Not connected'}</p>
-                    </div>
-                    {admin && (c ? (
-                      <form action={disconnectAccount}>
-                        <input type="hidden" name="platform" value={p} />
-                        <ConfirmSubmit
-                          className="btn-ghost px-3 py-1.5 text-xs"
-                          pendingText="Disconnecting…"
-                          title={`Disconnect ${PLATFORM_NAME[p]}?`}
-                          body={<>Nobody can post to {PLATFORM_NAME[p]} from the app until an admin connects it again. Posts already live stay up.</>}
-                          confirmLabel={`Disconnect ${PLATFORM_NAME[p]}`}
-                        >
-                          Disconnect
-                        </ConfirmSubmit>
-                      </form>
-                    ) : (
-                      configured[p] ? (
-                        <a href={`/api/social/connect/${p}`} className="btn-primary min-h-9 px-4 py-2 text-xs">Connect</a>
-                      ) : (
-                        <span className="chip bg-line text-muted">Setup needed</span>
-                      )
-                    ))}
+                <li key={p} className="card-row flex items-center gap-3">
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white ${p === 'instagram' ? 'bg-magenta' : 'bg-plum-700'}`}>
+                    <Icon name={p === 'instagram' ? 'instagram' : 'share'} className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold">{PLATFORM_NAME[p]}</p>
+                    <p className="truncate text-sm text-muted">{c ? (c.username ? `@${c.username}` : 'Connected') : 'Not connected'}</p>
                   </div>
-                  {admin && soon && <p className="mt-2 text-xs font-bold text-warn-ink">Login expires soon. <a href={`/api/social/connect/${p}`} className="underline">Reconnect</a></p>}
-                  {admin && !c && !configured[p] && <p className="mt-2 text-xs text-muted">Needs setup first: see “Social posting” in the README.</p>}
+                  {c ? <span className="chip bg-good/15 text-good-ink"><Icon name="check" className="h-3 w-3" /> On</span> : <span className="chip bg-line text-muted">Off</span>}
                 </li>
               );
             })}
           </ul>
-          {admin && connected.includes('tiktok') && ttMode() === 'inbox' && (
-            <p className="mt-4 text-xs text-muted">TikTok posts go to drafts until the TikTok app passes its audit. Then set <code>TIKTOK_POST_MODE=direct</code> to post straight to the feed.</p>
-          )}
+          {connected.includes('tiktok') && ttMode() === 'inbox' && <p className="mt-3 text-xs text-muted">TikTok posts land in the account’s drafts for now.</p>}
+          {admin && <Link href="/admin/accounts" className="link mt-3 inline-flex min-h-9 items-center text-sm">Manage in Admin →</Link>}
         </section>
       </div>
 

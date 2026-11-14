@@ -1,7 +1,7 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { requireLead, requireMember } from '@/lib/auth';
+import { requireMember, requireRoster } from '@/lib/auth';
 import { deadlineFor, notifyDecline, notifyNewDuties } from '@/lib/roster-notify';
 import { isValidDate, weekStart } from '@/lib/dates';
 
@@ -12,7 +12,7 @@ const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
  * reshuffling or reassigning only emails the people whose duty is new to them.
  */
 export async function publishRoster(form: FormData) {
-  const { supabase, member } = await requireLead();
+  const { supabase, member } = await requireRoster();
   const week = str(form, 'week');
   const sunday = weekStart(isValidDate(week) ? week : '');
   const { data: row } = await supabase.from('roster_weeks').select('id, published_at').eq('week_start', sunday).maybeSingle();

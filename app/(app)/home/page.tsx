@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { isLead, requireMember } from '@/lib/auth';
+import { canRoster, headOf, requireMember } from '@/lib/auth';
 import { LESSONS } from '@/content/lessons';
 import { departmentById } from '@/content/departments';
 import { Icon } from '@/components/Icon';
@@ -29,7 +29,7 @@ export default async function Home() {
   ]);
 
   // A draft roster stays with the leads until it's published.
-  const week = rosterWeek && (rosterWeek.published_at || isLead(member)) ? rosterWeek : null;
+  const week = rosterWeek && (rosterWeek.published_at || canRoster(member) || !!headOf(member)) ? rosterWeek : null;
   const { data: mySlots } = week
     ? await supabase.from('roster_slots').select('*').eq('week_id', week.id).eq('member_id', member.id).order('sort').returns<RosterSlot[]>()
     : { data: [] as RosterSlot[] };

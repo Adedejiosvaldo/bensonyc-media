@@ -87,7 +87,8 @@ export async function disconnectAccount(form: FormData) {
   if (!PLATFORMS.includes(p as Platform)) return;
   await createAdminClient().from('social_accounts').delete().eq('platform', p);
   revalidatePath('/social');
-  redirect(`/social?notice=${encodeURIComponent('Disconnected.')}`);
+  revalidatePath('/admin/accounts');
+  redirect(`/admin/accounts?notice=${encodeURIComponent('Disconnected.')}`);
 }
 
 export async function syncSocialNow() {

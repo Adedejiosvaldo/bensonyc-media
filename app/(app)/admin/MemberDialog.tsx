@@ -7,6 +7,12 @@ import type { Member } from '@/lib/types';
 
 type Dept = { id: string; name: string };
 
+const PERMISSIONS = [
+  { id: 'post', title: 'Post to socials', detail: 'Post to Instagram and TikTok and refresh Insights.' },
+  { id: 'plan', title: 'Plan content', detail: 'Build and edit the weekly board for every department, and use the AI ideas.' },
+  { id: 'roster', title: 'Run the roster', detail: 'Generate, publish and assign the whole roster.' },
+] as const;
+
 function Submit({ children, pending, className = 'btn-primary' }: { children: React.ReactNode; pending: string; className?: string }) {
   const { pending: busy } = useFormStatus();
   return (
@@ -170,6 +176,26 @@ export function MemberDialog({ member, departments, isSelf = false }: { member?:
               )}
             </div>
             {isSelf && <p className="text-xs text-muted">You can’t change your own role or status. Ask another admin.</p>}
+
+            <fieldset className="rounded-xl border border-line p-4">
+              <legend className="label px-1">Extra permissions</legend>
+              {role === 'admin' ? (
+                <p className="text-sm text-muted">Admins can do everything below already.</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {PERMISSIONS.map((p) => (
+                    <label key={p.id} className="flex cursor-pointer items-start gap-3">
+                      <input type="checkbox" name="grants" value={p.id} defaultChecked={(member?.grants ?? []).includes(p.id)} className="mt-0.5 h-4 w-4 accent-[rgb(var(--magenta))]" />
+                      <span className="text-sm">
+                        <b>{p.title}</b>
+                        <span className="block text-muted">{p.detail}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {role === 'head' && <p className="mt-3 text-xs text-muted">As a head they can already manage their own department’s duties and board items.</p>}
+            </fieldset>
 
             {err && (
               <p role="alert" className="alert-danger">

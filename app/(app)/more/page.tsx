@@ -1,11 +1,13 @@
 import Link from 'next/link';
-import { requireMember, isLead } from '@/lib/auth';
+import { requireMember, canSeeTeam, isAdmin } from '@/lib/auth';
+import { Suspense } from 'react';
 import { Icon } from '@/components/Icon';
+import { ViewAsSwitch } from '@/components/ViewAsSwitch';
 
 export const metadata = { title: 'More' };
 
 export default async function More() {
-  const { member } = await requireMember();
+  const { member, realMember, viewAs } = await requireMember();
   const groups = [
     {
       name: 'Social',
@@ -29,7 +31,7 @@ export default async function More() {
       name: 'You',
       links: [
         { href: '/account', label: 'Account', icon: 'user' },
-        ...(isLead(member) ? [{ href: '/admin', label: 'Admin', icon: 'admin' }] : []),
+        ...(canSeeTeam(member) ? [{ href: '/admin', label: isAdmin(member) ? 'Admin' : 'My team', icon: 'admin' }] : []),
       ],
     },
   ];
@@ -52,6 +54,13 @@ export default async function More() {
           </ul>
         </section>
       ))}
+      {realMember.role === 'admin' && (
+        <section className="card p-4 lg:hidden" aria-label="Preview">
+          <Suspense>
+            <ViewAsSwitch current={viewAs} />
+          </Suspense>
+        </section>
+      )}
       <form action="/auth/signout" method="post">
         <button className="btn-ghost w-full"><Icon name="out" className="h-4 w-4" /> Sign out</button>
       </form>
