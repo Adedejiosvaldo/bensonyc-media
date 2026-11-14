@@ -105,6 +105,20 @@ Development mode is enough while the app only posts to an account with a role on
 
 **Then:** an admin opens **Post → Connect** for each platform and signs in with the unit's account. Tokens are stored in a table only the server can read. Instagram logins last 60 days and TikTok's 365; the daily job refreshes them, and the Post page warns admins a week before one runs out.
 
+## AI social media manager
+
+Heads, admins and the Social team see **Ideas for this week** at the top of **This week**. It is built by Claude (Opus 5.5) from:
+- the unit's own posts and numbers from the last 90 days (from Insights), matched to series through the board's post links;
+- the month's theme and big moment from the 9-month plan, and the weekly rhythm;
+- recent posts, with real like and comment counts, from public Instagram accounts it chose to learn from (business discovery, Unified login only);
+- strong recent posts from church and youth creators that it finds with web search. Links it didn't actually see are dropped.
+
+It suggests 5–8 posts (day, series, format, hook, caption draft, shot notes, why, references). **Add to board** turns one into a normal content item with the details in its brief. Nothing is posted automatically.
+
+**When:** the daily job starts next week's ideas on Friday and collects them by Saturday morning. Anyone who can post can also tap **Get ideas** for the week on screen; results arrive within the hour (refresh the page).
+
+**Setup:** run `supabase/migrations/0005_ai_manager.sql`, add `ANTHROPIC_API_KEY` on Vercel, redeploy. Each run is one Message Batch (half price, no timeout), roughly $0.20–0.40 including a handful of web searches.
+
 ## Church page on its own domain
 
 `/church` works straight away. To make it the homepage of a separate domain (e.g. `bensonyc.org`), add that domain to the same Vercel project and set `CHURCH_HOST=bensonyc.org`. Visitors to that domain get the church website at `/`; the media website stays rooted at its own `NEXT_PUBLIC_SITE_URL`. Each site has its own homepage and visual system, with explicit links between them.
