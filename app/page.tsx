@@ -195,6 +195,10 @@ export default async function MediaLanding() {
       <footer className="media-footer media-gutter">
         <Link href="/" className="media-footer__brand"><Logo size={30} /> Benson YC Media</Link>
         <span>Part of MFM Benson Youth Church · {CHURCH.area}</span>
+        <span className="flex gap-5">
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
+        </span>
       </footer>
     </div>
   );
