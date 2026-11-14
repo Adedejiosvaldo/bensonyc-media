@@ -136,7 +136,7 @@ The media site is ink on a warm production sheet; the church site uses a deep pl
 The signed-in app uses the same two families with a compact scale: Anton for page titles (36–60px) and card titles (20–30px); 16px lead text; 15px body; 14px small text and navigation; 11px captions and chips (bold, tracked). Form fields render at 16px on phones (15px from `sm`) so iOS never zooms the page.
 
 ### Text colour roles (workspace)
-Magenta is a fill. Text uses roles that keep 4.5:1 in light and dark themes: `ink`, `muted`, `accent` (magenta tuned for reading, brighter in dark mode), `danger` (errors and losses only — never brand), `good-ink`, `warn-ink`. Errors always carry `role="alert"` and the `alert-danger` style.
+Magenta is a fill. The workspace is always light, whatever the device theme. Text uses roles that keep 4.5:1: `ink`, `muted`, `accent` (magenta tuned for reading), `danger` (errors and losses only — never brand), `good-ink`, `warn-ink`. Errors always carry `role="alert"` and the `alert-danger` style.
 
 ## Layout
 

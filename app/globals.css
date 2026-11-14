@@ -26,24 +26,6 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --plum-100: 52 22 52;
-    --surface: 20 10 22;
-    --card: 31 17 33;
-    --ink: 246 238 246;
-    --muted: 186 168 188;
-    --line: 60 38 62;
-    --good: 74 200 140;
-    --warn: 240 170 60;
-    --accent: 255 122 184;
-    --danger: 255 128 128;
-    --good-ink: 120 222 170;
-    --warn-ink: 250 196 104;
-    color-scheme: dark;
-  }
-}
-
 html { scroll-padding-top: 5rem; }
 html, body { background: rgb(var(--surface)); color: rgb(var(--ink)); }
 body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-tap-highlight-color: transparent; }
