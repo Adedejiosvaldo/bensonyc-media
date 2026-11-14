@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { requireMember, isLead } from '@/lib/auth';
+import { requireMember, isLead, isAdmin, canPostSocial } from '@/lib/auth';
 import { generateContentWeek, updateContentItem } from '@/app/actions';
 import { PageHeader } from '@/components/PageHeader';
 import { Icon } from '@/components/Icon';
 import { SubmitButton } from '@/components/SubmitButton';
 import { AutoSubmitSelect } from '@/components/AutoSubmitSelect';
 import { EmptyState } from '@/components/EmptyState';
+import { AiSuggestions } from '@/components/AiSuggestions';
 import { PILLAR_STYLE } from '@/components/StatusChip';
 import { monthForWeek } from '@/lib/plan';
 import { addDays, isValidDate, label, rangeLabel, todayLagos, weekDays, weekOfMonth, weekStart } from '@/lib/dates';
@@ -15,7 +16,7 @@ export const metadata = { title: 'Weekly content' };
 
 const STATUSES = ['planned', 'shot', 'edited', 'posted', 'skipped'].map((s) => ({ value: s, label: s[0].toUpperCase() + s.slice(1) }));
 
-export default async function ContentPage({ searchParams }: { searchParams: { week?: string } }) {
+export default async function ContentPage({ searchParams }: { searchParams: { week?: string; notice?: string } }) {
   const { supabase, member } = await requireMember();
   const today = todayLagos();
   const sunday = weekStart(isValidDate(searchParams.week) ? searchParams.week : today);
@@ -56,6 +57,10 @@ export default async function ContentPage({ searchParams }: { searchParams: { we
         </div>
       )}
 
+      {searchParams.notice && <p role="status" className="alert-good mb-6">{searchParams.notice}</p>}
+
+      {canPostSocial(member) && <AiSuggestions sunday={sunday} admin={isAdmin(member)} />}
+
       {list.length === 0 ? (
         <div className="card">
           <EmptyState
@@ -93,7 +98,7 @@ export default async function ContentPage({ searchParams }: { searchParams: { we
                     <h3 className="mt-2 break-words text-sm font-bold leading-snug">{i.title}</h3>
                     <details className="group mt-1">
                       <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1 text-xs font-semibold text-accent [&::-webkit-details-marker]:hidden">Brief <span aria-hidden="true" className="group-open:hidden">+</span><span aria-hidden="true" className="hidden group-open:inline">–</span></summary>
-                      <p className="mt-1.5 text-xs leading-relaxed text-muted">{i.brief}</p>
+                      <p className="mt-1.5 whitespace-pre-line break-words text-xs leading-relaxed text-muted">{i.brief}</p>
                     </details>
                     <div className="mt-3 grid gap-1.5">
                       <form action={updateContentItem}>
