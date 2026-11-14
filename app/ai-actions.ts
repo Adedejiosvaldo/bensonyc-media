@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation';
 import { canPostSocial, requireMember } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { startRun } from '@/lib/ai/manager';
-import { isValidDate, todayLagos, weekStart } from '@/lib/dates';
+import { isValidDate, rangeLabel, todayLagos, weekStart } from '@/lib/dates';
+import { planningWeek } from '@/lib/ai/week';
 import { tidy, unquote } from '@/lib/ai/text';
 
 const str = (form: FormData, key: string) => String(form.get(key) ?? '').trim();
@@ -19,8 +20,10 @@ async function requirePoster() {
 export async function requestSuggestions(form: FormData) {
   const { member } = await requirePoster();
   const week = str(form, 'week');
-  const sunday = weekStart(isValidDate(week) ? week : '');
-  let notice = 'Asked the AI for this week’s ideas. They usually arrive within the hour; check back here.';
+  const today = todayLagos();
+  // Late in the week (or on a past week), plan the week ahead rather than days that are already gone.
+  const sunday = planningWeek(weekStart(isValidDate(week) ? week : today), today);
+  let notice = `Asked the AI for ideas for ${rangeLabel(sunday)}. They usually arrive within the hour; check back here.`;
   try {
     await startRun(sunday, member.id);
   } catch (e) {
