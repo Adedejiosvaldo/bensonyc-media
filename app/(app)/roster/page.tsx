@@ -109,7 +109,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
       {!week ? (
         <div className="card">
           <EmptyState icon="roster" title="No roster for this week yet">
-            {lead ? 'Generate it above, ideally on Monday, so the team has the week to plan.' : 'Your unit lead publishes it on Monday. You’ll see your duty on Home once it’s out.'}
+            {lead ? 'Generate it above, ideally on Monday, so the team has the week to plan.' : 'Your unit lead publishes it before Sunday, usually early in the week. You’ll see your duty on Home once it’s out.'}
           </EmptyState>
         </div>
       ) : (

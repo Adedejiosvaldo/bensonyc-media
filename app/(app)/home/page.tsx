@@ -63,7 +63,7 @@ export default async function Home() {
           <dl className="grid grid-cols-2 gap-6 sm:text-right">
             <div>
               <dt className="kicker">Posted this week</dt>
-              <dd className="stat mt-1.5">{total ? <>{posted}<span className="text-2xl text-muted">/{total}</span></> : <span className="text-muted">—</span>}</dd>
+              <dd className="mt-1.5">{total ? <span className="stat">{posted}<span className="text-2xl text-muted">/{total}</span></span> : <span className="block pt-2 text-sm font-semibold text-muted">No board yet</span>}</dd>
             </div>
             <div>
               <dt className="kicker">Follower target</dt>
@@ -136,12 +136,12 @@ export default async function Home() {
             </ul>
           ) : (
             <EmptyState compact icon={week ? 'check' : 'calendar'} title={week ? 'Not on duty this Sunday' : 'Roster not out yet'}>
-              {week ? 'Come ready to support your team.' : 'Your unit lead publishes it on Monday.'}
+              {week ? 'Come ready to support your team.' : 'Your unit lead hasn’t published this Sunday’s roster yet. Check back here, or ask them.'}
             </EmptyState>
           )}
         </section>
 
-        <section className="card flex flex-col p-6" aria-labelledby="month-title">
+        <section className="card self-start p-6" aria-labelledby="month-title">
           <p className="kicker">This month</p>
           <h2 id="month-title" className="mt-1 text-2xl font-extrabold leading-tight tracking-[-0.015em]">{month?.theme ?? 'No theme set yet'}</h2>
           {month ? (
@@ -149,7 +149,7 @@ export default async function Home() {
           ) : (
             <p className="mt-2 text-sm text-muted">The plan for this month hasn’t been filled in.</p>
           )}
-          <Link href="/plan" className="link mt-auto inline-flex min-h-9 items-center pt-4 text-sm">See the 9-month plan →</Link>
+          <Link href="/plan" className="link mt-4 inline-flex min-h-9 items-center text-sm">See the 9-month plan →</Link>
         </section>
       </div>
 
