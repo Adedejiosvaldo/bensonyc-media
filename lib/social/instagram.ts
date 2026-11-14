@@ -23,6 +23,8 @@ export function igAuthUrl(redirectUri: string, state: string) {
       redirect_uri: redirectUri,
       response_type: 'code',
       override_default_response_type: 'true',
+      // Offers "Log in with Instagram" next to Facebook, so the account owner can sign in as the Instagram account itself.
+      prompt: 'login',
       state,
     });
     // Same shape as the Login URL Meta generates for the configuration (unversioned dialog).
