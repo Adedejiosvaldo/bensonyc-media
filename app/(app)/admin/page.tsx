@@ -1,14 +1,13 @@
 import Link from 'next/link';
 import { requireLead, isAdmin } from '@/lib/auth';
-import { addMember, updateMember } from '@/app/actions';
 import { PageHeader } from '@/components/PageHeader';
 import { ProgressBar } from '@/components/Progress';
-import { SubmitButton } from '@/components/SubmitButton';
 import { Icon } from '@/components/Icon';
 import { LESSONS } from '@/content/lessons';
 import { DEPARTMENTS, departmentById } from '@/content/departments';
-import type { Member } from '@/lib/types';
-import { AdminSave } from './AdminSave';
+import type { Member, MemberStatus } from '@/lib/types';
+import { MemberDialog } from './MemberDialog';
+import { label } from '@/lib/dates';
 
 export const metadata = { title: 'Admin' };
 
@@ -28,6 +27,13 @@ export default async function AdminPage({ searchParams }: { searchParams: { dept
   const registered = active.filter((m) => m.user_id).length;
   const finished = active.filter((m) => (doneBy.get(m.id) ?? 0) >= LESSONS.length && signed.has(m.id)).length;
 
+  const depts = DEPARTMENTS.map((d) => ({ id: d.id, name: d.name }));
+  const STATUS: Record<MemberStatus, { text: string; cls: string }> = {
+    active: { text: 'Active', cls: 'bg-good/15 text-good-ink' },
+    on_break: { text: 'On break', cls: 'bg-gold/25 text-warn-ink' },
+    inactive: { text: 'Inactive', cls: 'bg-line text-muted' },
+  };
+
   const stat = (n: number, total: number, l: string) => (
     <div className="card p-5">
       <p className="font-display text-4xl tabular-nums">{n}<span className="text-xl text-muted">/{total}</span></p>
@@ -38,8 +44,19 @@ export default async function AdminPage({ searchParams }: { searchParams: { dept
 
   return (
     <div>
-      <PageHeader eyebrow="Unit overview" title="Admin" actions={admin && <Link href="/admin/plan" className="btn-ghost"><Icon name="plan" className="h-4 w-4" /> Edit 9-month plan</Link>}>
-        Who has registered, finished onboarding and signed the pledge.
+      <PageHeader
+        eyebrow="Unit overview"
+        title="Admin"
+        actions={
+          admin && (
+            <>
+              <Link href="/admin/plan" className="btn-ghost"><Icon name="plan" className="h-4 w-4" /> Edit 9-month plan</Link>
+              <MemberDialog departments={depts} />
+            </>
+          )
+        }
+      >
+        Who has registered, finished onboarding and signed the pledge.{admin ? ' Add, edit or remove members here.' : ''}
       </PageHeader>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
@@ -56,52 +73,49 @@ export default async function AdminPage({ searchParams }: { searchParams: { dept
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="w-full min-w-[1080px] text-left text-sm">
+        <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-wider text-muted">
             <tr>
-              <th className="px-4 py-3">Member</th>
-              <th className="px-4 py-3">Course</th>
-              <th className="px-4 py-3">Pledge</th>
-              <th className="px-4 py-3">{admin ? 'Department · role · status' : 'Department'}</th>
+              <th scope="col" className="px-4 py-3">Member</th>
+              <th scope="col" className="px-4 py-3">Department · role</th>
+              <th scope="col" className="px-4 py-3">Status</th>
+              <th scope="col" className="px-4 py-3">Course</th>
+              <th scope="col" className="px-4 py-3">Pledge</th>
+              {admin && <th scope="col" className="px-4 py-3"><span className="sr-only">Actions</span></th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
+            {all.length === 0 && (
+              <tr><td colSpan={admin ? 6 : 5} className="px-4 py-8 text-center text-muted">No members in this department yet.</td></tr>
+            )}
             {all.map((m) => {
               const n = doneBy.get(m.id) ?? 0;
               return (
-                <tr key={m.id}>
-                  <td className="px-4 py-3">
-                    <p className={`font-bold ${m.status === 'inactive' ? 'text-muted line-through decoration-1' : ''}`}>{m.full_name}</p>
+                <tr key={m.id} className="align-middle">
+                  <th scope="row" className="px-4 py-3 text-left font-normal">
+                    <p className={`font-bold ${m.status === 'inactive' ? 'text-muted' : ''}`}>{m.full_name}{m.id === member.id && <span className="ml-1.5 text-xs font-semibold text-muted">(you)</span>}</p>
                     <p className="text-xs text-muted">{m.email ?? 'Not registered yet'}{m.phone ? ` · ${m.phone}` : ''}</p>
+                  </th>
+                  <td className="px-4 py-3">
+                    <p className="font-semibold">{departmentById(m.department_id)?.name ?? '—'}</p>
+                    <p className="text-xs capitalize text-muted">{m.role}</p>
                   </td>
-                  <td className="w-44 px-4 py-3">
+                  <td className="px-4 py-3">
+                    <span className={`chip ${STATUS[m.status].cls}`}>{STATUS[m.status].text}</span>
+                    {m.status === 'on_break' && m.break_until && <p className="mt-1 text-xs text-muted">Back {label(m.break_until)}</p>}
+                  </td>
+                  <td className="w-40 px-4 py-3">
                     <p className="mb-1 text-xs font-semibold tabular-nums">{n}/{LESSONS.length}</p>
                     <ProgressBar value={n} max={LESSONS.length} label={`${m.full_name}: lessons done`} />
                   </td>
                   <td className="px-4 py-3">
                     {signed.has(m.id) ? <span className="chip bg-good/15 text-good-ink"><Icon name="check" className="h-3 w-3" /> Signed</span> : <span className="chip bg-line text-muted">Not yet</span>}
                   </td>
-                  <td className="px-4 py-3">
-                    {admin ? (
-                      <form action={updateMember} className="flex items-center gap-2">
-                        <input type="hidden" name="id" value={m.id} />
-                        <select name="department_id" defaultValue={m.department_id ?? ''} className="select-sm" aria-label={`Department for ${m.full_name}`}>
-                          <option value="">—</option>
-                          {DEPARTMENTS.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                        </select>
-                        <select name="role" defaultValue={m.role} className="select-sm" aria-label={`Role for ${m.full_name}`} data-was={m.role}>
-                          <option value="member">Member</option><option value="head">Head</option><option value="admin">Admin</option>
-                        </select>
-                        <select name="status" defaultValue={m.status} className="select-sm" aria-label={`Status for ${m.full_name}`}>
-                          <option value="active">Active</option><option value="on_break">On break</option><option value="inactive">Inactive</option>
-                        </select>
-                        <input type="date" name="break_until" defaultValue={m.break_until ?? ''} className="select-sm" aria-label={`On break until (${m.full_name})`} />
-                        <AdminSave name={m.full_name} />
-                      </form>
-                    ) : (
-                      <span className="text-sm">{departmentById(m.department_id)?.name ?? '—'} · <span className="capitalize">{m.role}</span></span>
-                    )}
-                  </td>
+                  {admin && (
+                    <td className="px-4 py-3 text-right">
+                      <MemberDialog member={m} departments={depts} isSelf={m.id === member.id} />
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -109,18 +123,6 @@ export default async function AdminPage({ searchParams }: { searchParams: { dept
         </table>
       </div>
 
-      {admin && (
-        <form action={addMember} className="card mt-4 flex flex-col gap-3 p-5 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <label className="label" htmlFor="new_name">Add a member by name</label>
-            <input id="new_name" name="full_name" className="input" placeholder="First name is enough. They claim it when they register" />
-          </div>
-          <select name="department_id" className="input sm:w-56" aria-label="Department" defaultValue="content">
-            {DEPARTMENTS.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
-          <SubmitButton pendingText="Adding…">Add member</SubmitButton>
-        </form>
-      )}
     </div>
   );
 }

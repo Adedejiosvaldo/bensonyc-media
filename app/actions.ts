@@ -12,7 +12,7 @@ import { buildRoster, servicesForWeek } from '@/lib/roster';
 import { buildWeek, monthForWeek } from '@/lib/plan';
 import { addDays, isValidDate, label, todayLagos, weekStart } from '@/lib/dates';
 import { sendEmail } from '@/lib/email';
-import type { ContentStatus, Member, MemberStatus, PlanMonth, RosterSlot, Role } from '@/lib/types';
+import type { ContentStatus, Member, PlanMonth, RosterSlot } from '@/lib/types';
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 
@@ -313,27 +313,6 @@ export async function resetCalendarToken() {
 }
 
 /* ───────── Admin ───────── */
-
-export async function updateMember(form: FormData) {
-  const { supabase } = await requireAdmin();
-  const status = str(form, 'status') as MemberStatus;
-  const patch = {
-    department_id: str(form, 'department_id') || null,
-    role: str(form, 'role') as Role,
-    status,
-    break_until: status === 'on_break' && isValidDate(str(form, 'break_until')) ? str(form, 'break_until') : null,
-  };
-  await supabase.from('members').update(patch).eq('id', str(form, 'id'));
-  revalidatePath('/admin');
-}
-
-export async function addMember(form: FormData) {
-  const { supabase } = await requireAdmin();
-  const name = str(form, 'full_name');
-  if (!name) return;
-  await supabase.from('members').insert({ full_name: name, department_id: str(form, 'department_id') || null });
-  revalidatePath('/admin');
-}
 
 export async function updatePlanMonth(form: FormData) {
   const { supabase } = await requireAdmin();
