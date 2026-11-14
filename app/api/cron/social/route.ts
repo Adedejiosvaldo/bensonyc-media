@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { advanceAll, cleanupAll } from '@/lib/social/publish';
 import { syncStats } from '@/lib/social/sync';
 import { aiTick } from '@/lib/ai/manager';
+import { remindPending } from '@/lib/roster-notify';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -19,5 +20,7 @@ export async function GET(request: NextRequest) {
   const stats = await syncStats();
   // AI manager: on Fridays start next week's ideas (ready by Saturday); every day collect finished runs.
   const ai = await aiTick().catch((e: Error) => ({ error: e.message }));
-  return NextResponse.json({ advanced, cleaned, stats, ai });
+  // Roster: on Thursday, remind anyone who hasn't accepted or declined Sunday's duty.
+  const roster = await remindPending().catch((e: Error) => ({ error: e.message }));
+  return NextResponse.json({ advanced, cleaned, stats, ai, roster });
 }

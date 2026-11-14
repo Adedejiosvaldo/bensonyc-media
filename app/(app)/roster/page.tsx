@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import { requireMember, isLead } from '@/lib/auth';
-import { assignSlot, cancelSwap, generateRoster, requestSwap, takeSwap } from '@/app/actions';
+import { assignSlot, cancelSwap, generateRoster, takeSwap } from '@/app/actions';
+import { publishRoster } from '@/app/roster-actions';
+import { DutyReply } from '@/components/DutyReply';
+import { deadlineLabel, waNudgeLink } from '@/lib/roster-notify';
 import { PageHeader } from '@/components/PageHeader';
 import { Icon } from '@/components/Icon';
 import { SubmitButton } from '@/components/SubmitButton';
@@ -23,11 +26,13 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
   const sunday = weekStart(isValidDate(searchParams.week) ? searchParams.week : upcoming);
   const lead = isLead(member);
 
-  const [{ data: week }, { data: members }, { data: blockouts }] = await Promise.all([
-    supabase.from('roster_weeks').select('id, created_at').eq('week_start', sunday).maybeSingle(),
-    supabase.from('members').select('id, full_name, department_id, status').order('full_name').returns<Pick<Member, 'id' | 'full_name' | 'department_id' | 'status'>[]>(),
+  const [{ data: rosterWeek }, { data: members }, { data: blockouts }] = await Promise.all([
+    supabase.from('roster_weeks').select('id, created_at, published_at, deadline').eq('week_start', sunday).maybeSingle(),
+    supabase.from('members').select(lead ? 'id, full_name, department_id, status, phone' : 'id, full_name, department_id, status').order('full_name').returns<Pick<Member, 'id' | 'full_name' | 'department_id' | 'status' | 'phone'>[]>(),
     supabase.from('blockouts').select('member_id, start_date, end_date').lte('start_date', addDays(sunday, 6)).gte('end_date', sunday).returns<Pick<Blockout, 'member_id' | 'start_date' | 'end_date'>[]>(),
   ]);
+  // A draft roster stays with the leads until it's published.
+  const week = rosterWeek && (rosterWeek.published_at || lead) ? rosterWeek : null;
   const { data: slots } = week
     ? await supabase.from('roster_slots').select('*').eq('week_id', week.id).order('sort').returns<RosterSlot[]>()
     : { data: [] as RosterSlot[] };
@@ -44,6 +49,21 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
   const services = Array.from(new Map((slots ?? []).map((s) => [s.service_date + s.service_label, { date: s.service_date, label: s.service_label }])).values());
   const message = whatsappRoster(slots ?? [], nameOf);
 
+  // Who has replied, for the lead's status panel and WhatsApp nudges.
+  const assigned = (slots ?? []).filter((x) => x.member_id && x.service_date >= today);
+  const count = (r: RosterSlot['response']) => assigned.filter((x) => x.response === r).length;
+  const unnotified = assigned.filter((x) => x.response === 'pending' && !x.notified_at).length;
+  const memberById = new Map((members ?? []).map((m) => [m.id, m]));
+  const waiting = Array.from(
+    assigned
+      .filter((x) => x.response === 'pending')
+      .reduce((acc, x) => acc.set(x.member_id!, [...(acc.get(x.member_id!) ?? []), x]), new Map<string, RosterSlot[]>()),
+  ).map(([id, duties]) => {
+    const m = memberById.get(id);
+    return { id, name: m?.full_name ?? 'Someone', link: waNudgeLink(m?.phone ?? null, (m?.full_name ?? '').split(' ')[0] || 'there', duties, week?.deadline ?? null) };
+  });
+  const by = deadlineLabel(week?.deadline ?? null);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -56,7 +76,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
           </div>
         }
       >
-        In by 7:30am, grace till 8:00. Can’t make it? Tap <b>Ask for a swap</b> on your duty and anyone in your department can take it. Planning ahead? <Link href="/availability" className="link">Block out dates</Link>.
+        In by 7:30am, grace till 8:00. Accept your duty, or tap <b>Can’t make it</b> and anyone in your department can take it. Planning ahead? <Link href="/availability" className="link">Block out dates</Link>.
       </PageHeader>
 
       {searchParams.notice && (
@@ -92,7 +112,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
                 body={
                   <>
                     This replaces all {(slots ?? []).length} duties for the week with a fresh fair rotation, including names you set by hand
-                    {coveredSwap.size || openCount ? ` and ${coveredSwap.size + openCount} swap${coveredSwap.size + openCount === 1 ? '' : 's'} in progress` : ''}. Everyone sees the new roster straight away.
+                    {coveredSwap.size || openCount ? ` and ${coveredSwap.size + openCount} swap${coveredSwap.size + openCount === 1 ? '' : 's'} in progress` : ''}.{week?.published_at ? ' Everyone on it is asked to confirm again; use Email new duties after.' : ''}
                   </>
                 }
                 confirmLabel="Reshuffle the week"
@@ -106,10 +126,65 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
         </form>
       )}
 
+      {lead && week && !week.published_at && (
+        <section aria-label="Draft roster" className="flex flex-col gap-3 rounded-2xl border border-gold/60 bg-gold/15 p-5 sm:flex-row sm:items-center">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold text-plum-950"><Icon name="roster" /></span>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold">Draft: only leads can see this roster</p>
+            <p className="text-sm text-muted">Check the names, then publish. Everyone on it is emailed and sees their duty on Home with Accept or Can’t make it. Replies are due by Thursday 8pm.</p>
+          </div>
+          <form action={publishRoster}>
+            <input type="hidden" name="week" value={sunday} />
+            <SubmitButton pendingText="Publishing…"><Icon name="send" className="h-4 w-4" /> Publish &amp; notify</SubmitButton>
+          </form>
+        </section>
+      )}
+
+      {lead && week?.published_at && assigned.length > 0 && (
+        <section aria-labelledby="replies-title" className="card p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 id="replies-title" className="card-title">Replies</h2>
+              <p className="text-sm text-muted">{by ? `Due by ${by}.` : 'Published.'} Declines open a swap for the department automatically.</p>
+            </div>
+            {unnotified > 0 && (
+              <form action={publishRoster}>
+                <input type="hidden" name="week" value={sunday} />
+                <SubmitButton className="btn-ghost" pendingText="Sending…"><Icon name="mail" className="h-4 w-4" /> Email {unnotified} new {unnotified === 1 ? 'duty' : 'duties'}</SubmitButton>
+              </form>
+            )}
+          </div>
+          <dl className="mt-4 grid grid-cols-3 gap-3">
+            <div className="card-row"><dt className="kicker">Confirmed</dt><dd className="stat mt-1 text-3xl text-good-ink">{count('accepted')}</dd></div>
+            <div className="card-row"><dt className="kicker">No reply</dt><dd className="stat mt-1 text-3xl text-warn-ink">{count('pending')}</dd></div>
+            <div className="card-row"><dt className="kicker">Can’t make it</dt><dd className="stat mt-1 text-3xl text-danger">{count('declined')}</dd></div>
+          </dl>
+          {waiting.length > 0 && (
+            <div className="mt-4">
+              <p className="mb-2 text-sm font-semibold">Waiting on</p>
+              <ul className="flex flex-wrap gap-2">
+                {waiting.map((w) => (
+                  <li key={w.id}>
+                    {w.link ? (
+                      <a href={w.link} target="_blank" rel="noreferrer" className="btn-ghost min-h-9 px-3 py-1.5 text-xs">
+                        <Icon name="send" className="h-3.5 w-3.5" /> {w.name}<span className="sr-only"> (message on WhatsApp, opens in a new tab)</span>
+                      </a>
+                    ) : (
+                      <span className="chip min-h-9 bg-plum-100 px-3 normal-case tracking-normal text-ink" title="No WhatsApp number on file">{w.name} · no number</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-muted">Tap a name to open WhatsApp with their duty and the confirm link typed out, then press send.</p>
+            </div>
+          )}
+        </section>
+      )}
+
       {!week ? (
         <div className="card">
           <EmptyState icon="roster" title="No roster for this week yet">
-            {lead ? 'Generate it above, ideally on Monday, so the team has the week to plan.' : 'Your unit lead publishes it before Sunday, usually early in the week. You’ll see your duty on Home once it’s out.'}
+            {lead ? 'Generate it above, ideally on Monday, then publish it so everyone can confirm by Thursday.' : 'Your unit lead publishes it before Sunday, usually early in the week. You’ll see your duty on Home once it’s out.'}
           </EmptyState>
         </div>
       ) : (
@@ -152,6 +227,11 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
                               ) : (
                                 <p className={`mt-0.5 font-bold ${s.member_id ? '' : 'text-accent'}`}>{s.member_id ? nameOf.get(s.member_id) : 'Needs someone'}{mine ? ' (you)' : ''}</p>
                               )}
+                              {week?.published_at && s.member_id && !mine && (
+                                <p className={`mt-1 text-xs font-semibold ${s.response === 'accepted' ? 'text-good-ink' : s.response === 'declined' ? 'text-danger' : 'text-muted'}`}>
+                                  {s.response === 'accepted' ? '✓ Confirmed' : s.response === 'declined' ? 'Can’t make it' : 'No reply yet'}
+                                </p>
+                              )}
                               {swap?.note && <p className="mt-1 text-sm italic text-muted">“{swap.note}”</p>}
                               {covered && !swap && covered.to_member === s.member_id && (
                                 <p className="mt-1 text-xs text-muted">Covering for {nameOf.get(covered.from_member) ?? 'a teammate'}</p>
@@ -163,25 +243,13 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
                                   <SubmitButton className="btn-gold w-full py-2" pendingText="Taking…">Take this duty</SubmitButton>
                                 </form>
                               )}
-                              {upcoming && swap && (mine || lead) && (
+                              {upcoming && swap && lead && !mine && (
                                 <form action={cancelSwap} className="mt-2">
                                   <input type="hidden" name="swap_id" value={swap.id} />
-                                  <SubmitButton className="link min-h-9 text-xs" pendingText="Cancelling…">{mine ? 'I can make it after all' : 'Cancel swap request'}</SubmitButton>
+                                  <SubmitButton className="link min-h-9 text-xs" pendingText="Cancelling…">Cancel swap request</SubmitButton>
                                 </form>
                               )}
-                              {upcoming && mine && !swap && (
-                                <details className="mt-2 group">
-                                  <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1.5 text-xs font-bold text-accent [&::-webkit-details-marker]:hidden">
-                                    <Icon name="swap" className="h-3.5 w-3.5" /> Ask for a swap
-                                  </summary>
-                                  <form action={requestSwap} className="mt-2 space-y-2">
-                                    <input type="hidden" name="slot_id" value={s.id} />
-                                    <input type="hidden" name="week" value={sunday} />
-                                    <input name="note" maxLength={200} placeholder="Why? (optional)" className="input py-2 text-sm" aria-label="Reason for the swap" />
-                                    <SubmitButton className="btn-primary w-full py-2" pendingText="Sending…">Ask my department</SubmitButton>
-                                  </form>
-                                </details>
-                              )}
+                              {upcoming && mine && week?.published_at && <DutyReply slotId={s.id} response={s.response} reason={s.decline_reason} compact />}
                             </li>
                           );
                         })}

@@ -24,6 +24,7 @@ export function whatsappRoster(slots: RosterSlot[], nameOf: Map<string, string>)
   }
   lines.push('⏰ In by *7:30am* (grace till 8:00). Go down to church as soon as service starts.');
   lines.push('👔 Ladies: no nails, earrings or necklaces. Men: well dressed, no slippers.');
-  lines.push('🔁 Can’t make it? Swap and tell your head by Friday.');
+  lines.push('✅ Accept your duty in the app, or tap *Can’t make it* by Thursday 8pm so your department can cover you:');
+  lines.push(`${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/home`);
   return lines.join('\n');
 }
