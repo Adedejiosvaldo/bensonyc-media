@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { requestSuggestions, addAllSuggestions } from '@/app/ai-actions';
 import type { AiRun, AiSuggestion } from '@/lib/ai/manager';
 import { tidy, unquote } from '@/lib/ai/text';
-import { addDays, rangeLabel } from '@/lib/dates';
+import { rangeLabel } from '@/lib/dates';
+import { planningWeek } from '@/lib/ai/week';
 import { SubmitButton } from '../SubmitButton';
 import { Icon } from '../Icon';
 
@@ -49,42 +50,54 @@ export function AiPlanStrip({
     </form>
   );
 
-  const isCurrentWeek = sunday <= today && today <= addDays(sunday, 6);
-  const lateInWeek = isCurrentWeek && new Date(`${today}T12:00:00Z`).getUTCDay() >= 4;
+  const target = planningWeek(sunday, today);
+  const tooLate = target !== sunday;
   const upcoming = suggestions.filter((s) => s.status === 'new' && s.day >= today);
 
-  // Nothing yet. Late in the week, point at next week instead of planning days that are nearly gone.
+  // This week is (nearly) over: the useful move is planning the week ahead, so say that first.
+  const ahead = tooLate && (
+    <section aria-label="Plan the week ahead" className="mb-4 flex flex-col gap-3 rounded-2xl border border-magenta/30 bg-magenta/[0.06] p-4 sm:flex-row sm:items-center">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-magenta text-white"><Icon name="spark" /></span>
+      <p className="flex-1 text-sm">
+        <b>{sunday < today && !suggestions.some((s) => s.day >= today) ? 'This week is over.' : 'This week is almost over.'}</b> Plan {rangeLabel(target)} instead: a theme, plus a post for each day with a hook and caption.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Link href={`/content?week=${target}`} className="btn-ghost">Open {rangeLabel(target)}</Link>
+        {ask(`Get ideas for ${rangeLabel(target)}`, 'btn-primary', target)}
+      </div>
+    </section>
+  );
+
   if (!run) {
     return (
-      <section aria-label="AI ideas" className="mb-6 flex flex-col gap-3 rounded-2xl border border-dashed border-line bg-card p-4 sm:flex-row sm:items-center">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-plum-100 text-accent"><Icon name="spark" /></span>
-        <p className="flex-1 text-sm text-muted">
-          {lateInWeek ? (
-            <><b className="text-ink">This week is nearly over.</b> Plan next week instead: ideas there come with a theme, hooks and captions.</>
-          ) : (
-            <><b className="text-ink">Get AI ideas for this week:</b> a theme, plus a post for each day with a hook and caption, built from your numbers.</>
-          )}
-        </p>
-        {lateInWeek ? (
-          <Link href={`/content?week=${addDays(sunday, 7)}`} className="btn-primary">Plan {rangeLabel(addDays(sunday, 7))} <Icon name="arrow" className="h-4 w-4" /></Link>
-        ) : (
-          ask('Get ideas', 'btn-primary')
-        )}
-      </section>
+      ahead || (
+        <section aria-label="AI ideas" className="mb-6 flex flex-col gap-3 rounded-2xl border border-dashed border-line bg-card p-4 sm:flex-row sm:items-center">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-plum-100 text-accent"><Icon name="spark" /></span>
+          <p className="flex-1 text-sm text-muted">
+            <b className="text-ink">Get AI ideas for {rangeLabel(sunday)}:</b> a theme, plus a post for each day with a hook and caption, built from your numbers.
+          </p>
+          {ask('Get ideas', 'btn-primary')}
+        </section>
+      )
     );
   }
 
   if (run.status === 'queued') {
     return (
+      <>
+      {ahead}
       <p role="status" className="mb-6 flex items-center gap-3 rounded-2xl border border-line bg-card p-4 text-sm">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-plum-100 text-accent"><Icon name="clock" /></span>
-        <span><b>Working on ideas for this week.</b> Usually under an hour. Refresh this page to check.</span>
+        <span><b>Working on ideas for {rangeLabel(sunday)}.</b> Usually under an hour. Refresh this page to check.</span>
       </p>
+      </>
     );
   }
 
   if (run.status === 'failed') {
     return (
+      <>
+      {ahead}
       <div role="alert" className="mb-6 flex flex-col gap-3 rounded-2xl border border-danger/25 bg-danger/[0.06] p-4 sm:flex-row sm:items-center">
         <p className="flex flex-1 items-start gap-2 text-sm text-danger">
           <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
@@ -92,11 +105,14 @@ export function AiPlanStrip({
         </p>
         {ask('Try again', 'btn-ghost')}
       </div>
+      </>
     );
   }
 
   const theme = run.theme;
   return (
+    <>
+    {ahead}
     <section aria-labelledby="ai-theme" className="on-dark mb-6 overflow-hidden rounded-[24px] bg-plum-900 text-white shadow-lift">
       <div className="flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-center">
         <div className="min-w-0 flex-1">
@@ -115,7 +131,7 @@ export function AiPlanStrip({
           ) : (
             <span className="text-sm text-white/70">{suggestions.length ? 'All ideas are on the board.' : 'No ideas left for the days ahead.'}</span>
           )}
-          {ask('Ask again', 'btn border border-white/25 text-white hover:bg-white/10')}
+          {!tooLate && ask('Ask again', 'btn border border-white/25 text-white hover:bg-white/10')}
         </div>
       </div>
       {upcoming.length > 0 && <p className="border-t border-white/10 px-5 py-2.5 text-xs text-white/65 sm:px-6">Each idea also sits on its day below, marked <b className="text-white/85">AI idea</b>. Add or dismiss them one by one there.</p>}
@@ -164,5 +180,6 @@ export function AiPlanStrip({
         </details>
       )}
     </section>
+    </>
   );
 }
