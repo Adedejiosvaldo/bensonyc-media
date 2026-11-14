@@ -9,6 +9,9 @@ import { addDays, label, monthStart, todayLagos } from '@/lib/dates';
 import { PLATFORM_NAME, PLATFORMS, type AccountStat, type MediaStat, type Platform } from '@/lib/social/types';
 import type { PlanMonth } from '@/lib/types';
 import { PostDialog, type PostDetail } from './PostDialog';
+import { latestAiRun } from '@/lib/ai/manager';
+import { tidy, unquote } from '@/lib/ai/text';
+import { rangeLabel } from '@/lib/dates';
 
 export const metadata = { title: 'Insights' };
 export const maxDuration = 60;
@@ -28,6 +31,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: { n
   const sort = (Object.keys(SORTS).includes(searchParams.sort ?? '') ? searchParams.sort : 'recent') as keyof typeof SORTS;
   const range: Range = (RANGES as readonly number[]).includes(Number(searchParams.range)) ? (Number(searchParams.range) as Range) : 30;
 
+  const aiRun = canPostSocial(member) ? await latestAiRun() : null;
   const [{ data: daily }, { data: media }, { data: month }] = await Promise.all([
     supabase.from('social_account_stats').select('*').gte('day', addDays(today, -100)).order('day').returns<AccountStat[]>(),
     supabase.from('social_media_stats').select('*').order('posted_at', { ascending: false }).limit(300).returns<MediaStat[]>(),
@@ -170,6 +174,42 @@ export default async function InsightsPage({ searchParams }: { searchParams: { n
             </div>
           )}
         </div>
+      )}
+
+      {aiRun && (
+        <section aria-labelledby="ai-read" className="card p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="eyebrow mb-1 flex items-center gap-1.5"><Icon name="spark" className="h-3.5 w-3.5" /> AI read of your numbers</p>
+              <h2 id="ai-read" className="section-title">{aiRun.theme ? `Theme: ${unquote(aiRun.theme.title)}` : 'Latest findings'}</h2>
+              <p className="mt-1 text-sm text-muted">From the ideas run for {rangeLabel(aiRun.week_start)}.</p>
+            </div>
+            <Link href={`/content?week=${aiRun.week_start}`} className="link min-h-9 text-sm">See that week’s ideas →</Link>
+          </div>
+          {(aiRun.summary || aiRun.theme?.why) && <p className="mt-3 max-w-3xl text-[15px] leading-relaxed">{tidy(aiRun.summary || aiRun.theme?.why)}</p>}
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            {aiRun.insights?.length > 0 && (
+              <ul className="space-y-2">
+                {aiRun.insights.slice(0, 3).map((i) => (
+                  <li key={i.finding} className="card-row text-sm">
+                    <p className="font-semibold">{tidy(i.finding)}</p>
+                    <p className="mt-0.5 text-muted">{tidy(i.evidence)}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {aiRun.trends?.length > 0 && (
+              <ul className="space-y-2">
+                {aiRun.trends.slice(0, 3).map((t) => (
+                  <li key={t.what} className="card-row text-sm">
+                    <p className="font-semibold"><span className="mr-1.5 text-[11px] font-bold uppercase tracking-wide text-accent">{t.platform === 'tiktok' ? 'TikTok' : 'Instagram'}</span>{tidy(t.what)}</p>
+                    <p className="mt-0.5 text-muted">{tidy(t.how_we_use_it)}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
       )}
 
       <section aria-labelledby="range-title" className="space-y-3">
