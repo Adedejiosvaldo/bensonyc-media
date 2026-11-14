@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { aiConfigured, collectRuns, type AiInsight, type AiRef } from '@/lib/ai/manager';
+import { aiConfigured, collectRuns, type AiInsight, type AiRef, type AiTheme, type AiTrend } from '@/lib/ai/manager';
 import { requestSuggestions, addSuggestionToBoard, dismissSuggestion } from '@/app/ai-actions';
 import { SubmitButton } from './SubmitButton';
 import { Icon } from './Icon';
@@ -20,7 +20,7 @@ type Suggestion = {
   refs: AiRef[];
   status: 'new' | 'added' | 'dismissed';
 };
-type Run = { id: string; status: 'queued' | 'done' | 'failed'; summary: string | null; insights: AiInsight[]; error: string | null; created_at: string; finished_at: string | null };
+type Run = { id: string; status: 'queued' | 'done' | 'failed'; theme: AiTheme | null; trends: AiTrend[]; summary: string | null; insights: AiInsight[]; error: string | null; created_at: string; finished_at: string | null };
 
 const host = (u: string) => {
   try {
@@ -47,7 +47,7 @@ export async function AiSuggestions({ sunday, admin }: { sunday: string; admin: 
   await collectRuns(sunday);
   const db = createAdminClient();
   const [{ data: runs }, { data: suggestions }] = await Promise.all([
-    db.from('ai_runs').select('id, status, summary, insights, error, created_at, finished_at').eq('week_start', sunday).order('created_at', { ascending: false }).limit(1).returns<Run[]>(),
+    db.from('ai_runs').select('id, status, theme, trends, summary, insights, error, created_at, finished_at').eq('week_start', sunday).order('created_at', { ascending: false }).limit(1).returns<Run[]>(),
     db.from('ai_suggestions').select('*').eq('week_start', sunday).neq('status', 'dismissed').order('day').returns<Suggestion[]>(),
   ]);
   const run = runs?.[0];
@@ -87,6 +87,38 @@ export async function AiSuggestions({ sunday, admin }: { sunday: string; admin: 
           <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
           <span>The last request didn’t finish: {run.error ?? 'unknown error'}</span>
         </p>
+      )}
+
+      {run?.status === 'done' && run.theme && (
+        <div className="on-dark relative overflow-hidden rounded-[24px] bg-plum-900 p-6 text-white shadow-lift">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-56 w-56 rounded-full bg-magenta/35 blur-3xl" aria-hidden="true" />
+          <p className="relative text-[11px] font-bold uppercase tracking-[0.14em] text-gold">Theme of the week</p>
+          <p className="relative mt-1.5 font-display text-4xl uppercase leading-[0.95] sm:text-5xl">{run.theme.title}</p>
+          <p className="relative mt-3 max-w-2xl text-[15px] leading-relaxed text-white/85">{run.theme.idea}</p>
+          <p className="relative mt-2 max-w-2xl text-sm text-white/65"><b className="text-white/85">Why:</b> {run.theme.why}</p>
+        </div>
+      )}
+
+      {run?.status === 'done' && run.trends?.length > 0 && (
+        <div className="card p-5">
+          <h3 className="card-title">Working on Instagram and TikTok right now</h3>
+          <ul className="mt-3 grid gap-2 md:grid-cols-2">
+            {run.trends.map((t) => (
+              <li key={t.what} className="card-row text-sm">
+                <p className="flex items-center gap-1.5 font-semibold">
+                  <span className={`chip ${t.platform === 'tiktok' ? 'bg-plum-900 text-white' : 'bg-magenta text-white'}`}>{t.platform === 'tiktok' ? 'TikTok' : 'Instagram'}</span>
+                  {t.what}
+                </p>
+                <p className="mt-1 text-muted">{t.how_we_use_it}</p>
+                {t.url && (
+                  <a href={t.url} target="_blank" rel="noreferrer" className="link mt-1 inline-flex text-xs">
+                    See an example: {host(t.url)}<span className="sr-only"> (opens in a new tab)</span>
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {run?.status === 'done' && (run.summary || run.insights?.length > 0) && (

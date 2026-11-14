@@ -113,7 +113,9 @@ Heads, admins and the Social team see **Ideas for this week** at the top of **Th
 - recent posts, with real like and comment counts, from public Instagram accounts it chose to learn from (business discovery, Unified login only);
 - strong recent posts from church and youth creators that it finds with web search. Links it didn't actually see are dropped.
 
-It suggests 5–8 posts (day, series, format, hook, caption draft, shot notes, why, references). **Add to board** turns one into a normal content item with the details in its brief. Nothing is posted automatically.
+Each run it compares the last 7 days with the 90-day norm, searches Instagram and TikTok (through web search) for what's working with church and youth creators, and picks a **theme of the week**. It then suggests 5–8 posts that carry the theme (day, series, format, hook, caption draft, shot notes, why, references), plus a short list of trends to try.
+
+**Voice and know-how** live in `content/ai-playbook.ts`: who we're talking to, our voice, words to avoid, hook patterns, caption shape and calls to action, what's working. Edit that text to change how the AI writes; nothing else needs to change. **Add to board** turns one into a normal content item with the details in its brief. Nothing is posted automatically.
 
 **When:** the daily job starts next week's ideas on Friday and collects them by Saturday morning. Anyone who can post can also tap **Get ideas** for the week on screen; results arrive within the hour (refresh the page).
 

@@ -23,6 +23,9 @@ create table if not exists public.ai_runs (
   finished_at timestamptz
 );
 alter table public.ai_runs add column if not exists request jsonb;
+-- The week's theme the model proposes from last week's numbers, and what it saw trending on Instagram and TikTok.
+alter table public.ai_runs add column if not exists theme jsonb;
+alter table public.ai_runs add column if not exists trends jsonb not null default '[]'::jsonb;
 alter table public.ai_runs add column if not exists attempts int not null default 0;
 create index if not exists ai_runs_week_idx on public.ai_runs (week_start, created_at desc);
 

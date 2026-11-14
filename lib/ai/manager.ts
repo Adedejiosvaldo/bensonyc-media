@@ -10,6 +10,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { DEPARTMENTS } from '@/content/departments';
 import { DO, DONT, SERIES } from '@/content/brand';
+import { AI_PLAYBOOK } from '@/content/ai-playbook';
 import { RHYTHM, buildWeek, monthForWeek } from '@/lib/plan';
 import { addDays, label, todayLagos, weekStart } from '@/lib/dates';
 import { getAccount } from '@/lib/social/accounts';
@@ -29,7 +30,11 @@ const DEPT_IDS = DEPARTMENTS.map((d) => d.id);
 
 export type AiRef = { url: string; platform: 'instagram' | 'tiktok' | 'other'; note: string };
 export type AiInsight = { finding: string; evidence: string };
+export type AiTheme = { title: string; idea: string; why: string };
+export type AiTrend = { platform: 'instagram' | 'tiktok'; what: string; how_we_use_it: string; url: string };
 type PlanInput = {
+  week_theme: AiTheme;
+  trends: AiTrend[];
   summary: string;
   insights: AiInsight[];
   suggestions: {
@@ -60,8 +65,34 @@ const planTool: Anthropic.Tool = {
   input_schema: {
     type: 'object',
     additionalProperties: false,
-    required: ['summary', 'insights', 'suggestions', 'peer_accounts'],
+    required: ['week_theme', 'trends', 'summary', 'insights', 'suggestions', 'peer_accounts'],
     properties: {
+      week_theme: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['title', 'idea', 'why'],
+        description: 'One theme for the week, drawn from last week’s numbers, the month’s plan theme and what is working on Instagram and TikTok.',
+        properties: {
+          title: { type: 'string', description: 'A short phrase a member could repeat.' },
+          idea: { type: 'string', description: 'One or two sentences: what the week is about and how the posts carry it.' },
+          why: { type: 'string', description: 'The evidence: last week’s numbers against the usual level, and any trend it builds on.' },
+        },
+      },
+      trends: {
+        type: 'array',
+        description: '3 to 6 things working right now on Instagram and TikTok for church, youth and Christian creators (formats, sounds, series ideas, caption styles), with at least one from each platform when found.',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['platform', 'what', 'how_we_use_it', 'url'],
+          properties: {
+            platform: { type: 'string', enum: ['instagram', 'tiktok'] },
+            what: { type: 'string', description: 'What the trend is, specifically.' },
+            how_we_use_it: { type: 'string', description: 'How YC could do it this week.' },
+            url: { type: 'string', description: 'An example link from your search results, or an empty string if none.' },
+          },
+        },
+      },
       summary: { type: 'string', description: 'Two or three plain sentences for the unit lead: what worked lately and the idea behind this week.' },
       insights: {
         type: 'array',
@@ -119,11 +150,15 @@ How the unit works:
 - Formats: Instagram photos must be between 4:5 portrait and 1.91:1 landscape; reels and TikToks are vertical 9:16.
 
 How to work:
-1. Read the unit's own posts and numbers. Find what earns views, shares and saves relative to the account's usual level, and what doesn't. Be specific and cite numbers.
-2. Use web search to find a few recent, strong public posts from church, youth ministry and Christian creators on Instagram and TikTok, especially from Nigeria and Africa, that the team could learn from. Prefer direct post or profile links. Never invent a URL: only use URLs that appear in your search results or in the peer posts provided.
-3. Suggest 5 to 8 posts for the target week that keep the weekly rhythm and the month's theme, lean into what is working, and borrow specific ideas from the references. Each must be realistic for volunteers with phones.
-4. Name up to 8 public Instagram business or creator accounts worth studying next week.
-5. Finish by calling ${PLAN_TOOL} once with the whole plan. Write in plain, warm, everyday English. No church jargon the team wouldn't use.`;
+1. Read last week's posts against the 90-day average (provided as last_week_vs_usual) and the full 90-day list. Find what earned views, shares and saves above the usual level, and what fell flat. Be specific and cite numbers.
+2. Search the web for what is working right now on both platforms. Run separate searches for Instagram (for example with site:instagram.com) and TikTok (for example with site:tiktok.com), plus a general search for recent church and youth content trends. Look for church, youth ministry and Christian creators, especially in Nigeria and Africa: formats, sounds, series ideas, hooks and caption styles. Prefer direct post or profile links. Never invent a URL: only use URLs that appear in your search results or in the peer posts provided.
+3. Choose one theme for the week that ties together what last week's numbers say people want more of, the month's plan theme and what is trending.
+4. Suggest 5 to 8 posts for the target week that carry that theme, keep the weekly rhythm, lean into what is working and borrow specific ideas from the references. Give each a hook and a ready-to-edit caption written by the playbook below. Each must be realistic for volunteers with phones.
+5. Name up to 8 public Instagram business or creator accounts worth studying next week.
+6. Finish by calling ${PLAN_TOOL} once with the whole plan.
+
+The unit's playbook (follow it for voice, hooks and captions):
+${AI_PLAYBOOK}`;
 
 const num = (v: number | null | undefined) => (v == null ? null : v);
 
@@ -177,8 +212,29 @@ async function gatherContext(sunday: string) {
     ? await db.from('ai_suggestions').select('title, series, format, status').in('run_id', runIds)
     : { data: [] as { title: string; series: string; format: string; status: string }[] };
 
+  // Last 7 days against the 90-day norm, so the theme can come from what people actually responded to.
+  const weekAgo = addDays(todayLagos(), -7);
+  const lastWeek = ownPosts.filter((p) => (p.date ?? '') >= weekAgo);
+  const earlier = ownPosts.filter((p) => (p.date ?? '') < weekAgo);
+  type Metric = 'views' | 'reach' | 'likes' | 'comments' | 'shares' | 'saves';
+  const avg = (rows: typeof ownPosts) =>
+    Object.fromEntries(
+      (['views', 'reach', 'likes', 'comments', 'shares', 'saves'] as Metric[]).map((k) => {
+        const vals = rows.map((r) => r[k]).filter((v): v is number => v != null);
+        return [k, vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null];
+      }),
+    );
+  const byViews = [...lastWeek].sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
+  const lastWeekVsUsual = {
+    last_7_days: { posts: lastWeek.length, average_per_post: avg(lastWeek) },
+    usual: { posts_per_week: Math.round((earlier.length / 12) * 10) / 10, average_per_post: avg(earlier) },
+    best_last_7_days: byViews[0] ?? null,
+    weakest_last_7_days: byViews.length > 1 ? byViews[byViews.length - 1] : null,
+  };
+
   const month = monthForWeek(sunday, months ?? []);
   return {
+    last_week_vs_usual: lastWeekVsUsual,
     target_week: { starts: sunday, ends: addDays(sunday, 6), days: Array.from({ length: 7 }, (_, i) => `${addDays(sunday, i)} (${label(addDays(sunday, i), 'day')})`) },
     plan_month: month ? { theme: month.theme, big_moment: month.big_moment, hero_content: month.hero_content, follower_target: month.follower_target } : null,
     default_board_for_the_week: buildWeek(sunday, month).map((d) => ({ day: d.day, series: d.series, format: d.format, title: d.title })),
@@ -203,12 +259,12 @@ export async function startRun(sunday: string, requestedBy: string | null) {
     thinking: { type: 'adaptive' },
     output_config: { effort: 'high' },
     system: SYSTEM,
-    tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 8 }, planTool],
+    tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 10 }, planTool],
     tool_choice: { type: 'auto' },
     messages: [
       {
         role: 'user',
-        content: `Plan the posts for the week of ${label(sunday, 'long')}. Here is the data, as JSON:\n\n<data>\n${JSON.stringify(context)}\n</data>\n\nSearch for references, then call ${PLAN_TOOL} with the plan.`,
+        content: `Plan the posts for the week of ${label(sunday, 'long')}. Here is the data, as JSON:\n\n<data>\n${JSON.stringify(context)}\n</data>\n\nCompare last week with the usual level, search Instagram and TikTok for what is working, choose the week's theme, then call ${PLAN_TOOL} with the plan.`,
       },
     ],
   };
@@ -319,7 +375,15 @@ async function collect(run: RunRow) {
   }
   await db
     .from('ai_runs')
-    .update({ status: 'done', summary: plan.summary, insights: (plan.insights ?? []).slice(0, 5), usage, finished_at: new Date().toISOString() })
+    .update({
+      status: 'done',
+      theme: plan.week_theme ?? null,
+      trends: (plan.trends ?? []).slice(0, 6).map((t) => ({ ...t, url: t.url && urls.has(clean(t.url)) ? t.url : '' })),
+      summary: plan.summary,
+      insights: (plan.insights ?? []).slice(0, 5),
+      usage,
+      finished_at: new Date().toISOString(),
+    })
     .eq('id', run.id);
 }
 
