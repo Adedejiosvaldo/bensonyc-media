@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { advanceAll, cleanupAll } from '@/lib/social/publish';
 import { syncStats } from '@/lib/social/sync';
+import { aiTick } from '@/lib/ai/manager';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -16,5 +17,7 @@ export async function GET(request: NextRequest) {
   const advanced = await advanceAll(20_000, true);
   const cleaned = await cleanupAll();
   const stats = await syncStats();
-  return NextResponse.json({ advanced, cleaned, stats });
+  // AI manager: on Fridays start next week's ideas (ready by Saturday); every day collect finished runs.
+  const ai = await aiTick().catch((e: Error) => ({ error: e.message }));
+  return NextResponse.json({ advanced, cleaned, stats, ai });
 }

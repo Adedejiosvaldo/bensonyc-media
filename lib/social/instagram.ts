@@ -223,3 +223,37 @@ export async function igRecentMedia(acct: SocialAccount, limit = 25) {
   }
   return out;
 }
+
+export type PeerPost = { caption: string | null; type: string | null; likes: number | null; comments: number | null; permalink: string | null; posted_at: string | null };
+
+/**
+ * Recent posts of another public Instagram Business or Creator account, with real like and comment counts,
+ * through business discovery. Only available on the Unified login (graph.facebook.com) path.
+ */
+export async function igPeerPosts(acct: SocialAccount, username: string, limit = 12): Promise<{ username: string; followers: number | null; posts: PeerPost[] }> {
+  if (!igUnified()) throw new SocialError('Business discovery needs the Unified login connection.');
+  const handle = username.replace(/^@/, '').trim();
+  if (!/^[A-Za-z0-9._]{1,30}$/.test(handle)) throw new SocialError(`Not an Instagram username: ${username}`);
+  const fields = `business_discovery.username(${handle}){username,followers_count,media.limit(${limit}){caption,media_type,media_product_type,like_count,comments_count,permalink,timestamp}}`;
+  const r = await igFetch<{
+    business_discovery?: {
+      username: string;
+      followers_count?: number;
+      media?: { data?: { caption?: string; media_type?: string; media_product_type?: string; like_count?: number; comments_count?: number; permalink?: string; timestamp?: string }[] };
+    };
+  }>(`${graph()}/${acct.account_id}?fields=${encodeURIComponent(fields)}&access_token=${encodeURIComponent(acct.access_token)}`);
+  const bd = r.business_discovery;
+  if (!bd) throw new SocialError(`No public business profile for @${handle}.`);
+  return {
+    username: bd.username,
+    followers: bd.followers_count ?? null,
+    posts: (bd.media?.data ?? []).map((m) => ({
+      caption: m.caption ?? null,
+      type: m.media_product_type === 'REELS' ? 'REEL' : (m.media_type ?? null),
+      likes: m.like_count ?? null,
+      comments: m.comments_count ?? null,
+      permalink: m.permalink ?? null,
+      posted_at: m.timestamp ?? null,
+    })),
+  };
+}
