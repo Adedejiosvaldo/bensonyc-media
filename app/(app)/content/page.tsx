@@ -8,7 +8,7 @@ import { AutoSubmitSelect } from '@/components/AutoSubmitSelect';
 import { EmptyState } from '@/components/EmptyState';
 import { AiPlanStrip } from '@/components/ai/AiPlanStrip';
 import { AiIdeaCard } from '@/components/ai/AiIdeaCard';
-import { PILLAR_STYLE } from '@/components/StatusChip';
+import { PILLAR_STYLE, StatusChip } from '@/components/StatusChip';
 import { aiConfigured, loadAiWeek } from '@/lib/ai/manager';
 import { monthForWeek } from '@/lib/plan';
 import { addDays, isValidDate, label, rangeLabel, todayLagos, weekDays, weekOfMonth, weekStart } from '@/lib/dates';
@@ -92,70 +92,93 @@ export default async function ContentPage({ searchParams }: { searchParams: { we
             </div>
           )}
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
+          {/* One row per day, in order: the day on the left, its posts beside it. Reads the same on a phone. */}
+          <ol className="card divide-y divide-line overflow-hidden p-0" aria-label={`Posts for ${rangeLabel(sunday)}`}>
             {weekDays(sunday).map((day) => {
               const dayItems = list.filter((i) => i.day === day);
               const dayIdeas = ideas.filter((s) => s.day === day);
               const isToday = day === today;
+              const past = day < today;
               const empty = dayItems.length === 0 && dayIdeas.length === 0;
               return (
-                <section
+                <li
                   key={day}
                   aria-label={`${label(day, 'long')}${isToday ? ', today' : ''}`}
-                  className={`flex min-w-0 flex-col gap-2 rounded-2xl p-2 ${isToday ? 'bg-magenta/10 ring-1 ring-magenta/30' : 'bg-plum-100/50'} ${empty ? 'max-sm:hidden' : ''}`}
+                  className={`grid gap-3 p-4 sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:gap-5 sm:p-5 ${isToday ? 'bg-magenta/[0.06]' : ''} ${empty ? 'max-sm:py-3' : ''}`}
                 >
-                  <div className="flex items-baseline justify-between px-2 pt-1">
-                    <h2 className={`font-display text-xl uppercase ${isToday ? 'text-accent' : ''}`}>
-                      {label(day, 'day')}
-                      {isToday && <span className="ml-2 align-middle font-sans text-[11px] font-bold tracking-wide">Today</span>}
-                    </h2>
-                    <p className="text-xs font-semibold text-muted">{label(day)}</p>
+                  <div className={`flex items-baseline gap-2 sm:block ${past && !isToday ? 'opacity-60' : ''}`}>
+                    <h2 className={`font-display text-2xl uppercase leading-none ${isToday ? 'text-accent' : ''}`}>{label(day, 'day')}</h2>
+                    <p className="text-sm font-semibold text-muted sm:mt-1">{label(day)}</p>
+                    {isToday && <span className="chip mt-1.5 bg-magenta text-white sm:inline-flex">Today</span>}
                   </div>
-                  {dayItems.map((i) => (
-                    <article key={i.id} className="rounded-xl border border-line bg-card p-3 shadow-sm">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className={`chip ${PILLAR_STYLE[i.pillar]} px-2 py-0.5`}>{i.series}</span>
-                        <span className="text-xs font-semibold text-muted">{i.format}</span>
-                      </div>
-                      <h3 className="mt-2 break-words text-sm font-bold leading-snug">{i.title}</h3>
-                      <details className="group mt-1">
-                        <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1 text-xs font-semibold text-accent [&::-webkit-details-marker]:hidden">
-                          Brief <span aria-hidden="true" className="group-open:hidden">+</span><span aria-hidden="true" className="hidden group-open:inline">–</span>
-                        </summary>
-                        <p className="mt-1.5 whitespace-pre-line break-words text-xs leading-relaxed text-muted">{i.brief}</p>
-                      </details>
-                      <div className="mt-3 grid gap-1.5">
-                        {canEdit(i) ? (
-                          <form action={updateContentItem}>
-                            <input type="hidden" name="id" value={i.id} />
-                            <AutoSubmitSelect name="owner_id" label={`Owner of ‘${i.title}’`} defaultValue={i.owner_id ?? ''} options={owners} />
-                          </form>
-                        ) : i.owner_id ? (
-                          <p className="text-xs font-semibold text-muted">{i.owner_id === member.id ? 'Yours' : owners.find((o) => o.value === i.owner_id)?.label ?? 'Taken'}</p>
-                        ) : (
-                          <form action={updateContentItem}>
-                            <input type="hidden" name="id" value={i.id} />
-                            <input type="hidden" name="owner_id" value={member.id} />
-                            <SubmitButton className="btn-ghost min-h-9 w-full px-3 py-1.5 text-xs" pendingText="Taking…">Take this<span className="sr-only">: {i.title}</span></SubmitButton>
-                          </form>
-                        )}
-                        {(canEdit(i) || i.owner_id === member.id) && (
-                          <form action={updateContentItem}>
-                            <input type="hidden" name="id" value={i.id} />
-                            <AutoSubmitSelect name="status" label={`Status of ‘${i.title}’`} defaultValue={i.status} options={STATUSES} />
-                          </form>
-                        )}
-                      </div>
-                    </article>
-                  ))}
-                  {dayIdeas.map((s) => (
-                    <AiIdeaCard key={s.id} idea={s} past={day < today} />
-                  ))}
-                  {empty && <p className="px-2 pb-2 text-xs text-muted">Nothing planned</p>}
-                </section>
+
+                  {empty ? (
+                    <p className="self-center text-sm text-muted">Nothing planned</p>
+                  ) : (
+                    <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                      {dayItems.map((i) => {
+                        const editable = canEdit(i);
+                        const mine = i.owner_id === member.id;
+                        const ownerName = i.owner_id ? (mine ? 'You' : owners.find((o) => o.value === i.owner_id)?.label ?? 'Someone') : null;
+                        return (
+                          <article key={i.id} className={`flex flex-col rounded-xl border border-line bg-card p-3 shadow-sm ${past ? 'bg-surface' : ''}`}>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className={`chip ${PILLAR_STYLE[i.pillar]} px-2 py-0.5`}>{i.series}</span>
+                              <span className="text-xs font-semibold text-muted">{i.format}</span>
+                              {!editable && !mine && <span className="ml-auto"><StatusChip status={i.status} /></span>}
+                            </div>
+                            <h3 className="mt-2 break-words text-[15px] font-bold leading-snug">{i.title}</h3>
+                            <details className="group mt-1">
+                              <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1 text-xs font-semibold text-accent [&::-webkit-details-marker]:hidden">
+                                Brief <span aria-hidden="true" className="group-open:hidden">+</span><span aria-hidden="true" className="hidden group-open:inline">–</span>
+                              </summary>
+                              <p className="mt-1.5 whitespace-pre-line break-words text-xs leading-relaxed text-muted">{i.brief}</p>
+                            </details>
+
+                            <div className="mt-auto grid gap-1.5 pt-3">
+                              {editable ? (
+                                <div className="grid gap-1.5 sm:grid-cols-2">
+                                  <form action={updateContentItem}>
+                                    <input type="hidden" name="id" value={i.id} />
+                                    <AutoSubmitSelect name="owner_id" label={`Owner of ‘${i.title}’`} defaultValue={i.owner_id ?? ''} options={owners} />
+                                  </form>
+                                  <form action={updateContentItem}>
+                                    <input type="hidden" name="id" value={i.id} />
+                                    <AutoSubmitSelect name="status" label={`Status of ‘${i.title}’`} defaultValue={i.status} options={STATUSES} />
+                                  </form>
+                                </div>
+                              ) : mine ? (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-semibold text-good-ink">Yours</span>
+                                  <form action={updateContentItem} className="flex-1">
+                                    <input type="hidden" name="id" value={i.id} />
+                                    <AutoSubmitSelect name="status" label={`Status of ‘${i.title}’`} defaultValue={i.status} options={STATUSES} />
+                                  </form>
+                                </div>
+                              ) : ownerName ? (
+                                <p className="text-xs text-muted">Owner: <b className="text-ink">{ownerName}</b></p>
+                              ) : past ? (
+                                <p className="text-xs text-muted">Nobody took this one.</p>
+                              ) : (
+                                <form action={updateContentItem}>
+                                  <input type="hidden" name="id" value={i.id} />
+                                  <input type="hidden" name="owner_id" value={member.id} />
+                                  <SubmitButton className="btn-ghost min-h-9 w-full px-3 py-1.5 text-xs" pendingText="Taking…">Take this<span className="sr-only">: {i.title}</span></SubmitButton>
+                                </form>
+                              )}
+                            </div>
+                          </article>
+                        );
+                      })}
+                      {dayIdeas.map((s) => (
+                        <AiIdeaCard key={s.id} idea={s} past={past} />
+                      ))}
+                    </div>
+                  )}
+                </li>
               );
             })}
-          </div>
+          </ol>
         </>
       )}
 
