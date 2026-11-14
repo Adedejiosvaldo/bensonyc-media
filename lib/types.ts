@@ -1,6 +1,7 @@
 export type DepartmentId = 'projection' | 'photography' | 'content' | 'design' | 'social';
 export type Role = 'member' | 'head' | 'admin';
 export type MemberStatus = 'active' | 'on_break' | 'inactive';
+export type Grant = 'post' | 'plan' | 'roster';
 export type ContentStatus = 'planned' | 'shot' | 'edited' | 'posted' | 'skipped';
 export type Pillar = 'People' | 'Word' | 'Events' | 'Community';
 
@@ -15,6 +16,7 @@ export type Member = {
   status: MemberStatus;
   break_until: string | null;
   created_at: string;
+  grants: Grant[];
 };
 
 export type PlanMonth = {

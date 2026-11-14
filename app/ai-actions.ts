@@ -1,7 +1,7 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { canPostSocial, requireMember } from '@/lib/auth';
+import { requireAdmin, requirePlan } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { startRun } from '@/lib/ai/manager';
 import { isValidDate, rangeLabel, todayLagos, weekStart } from '@/lib/dates';
@@ -10,11 +10,8 @@ import { tidy, unquote } from '@/lib/ai/text';
 
 const str = (form: FormData, key: string) => String(form.get(key) ?? '').trim();
 
-async function requirePoster() {
-  const session = await requireMember();
-  if (!canPostSocial(session.member)) redirect('/content');
-  return session;
-}
+// AI ideas are part of planning content: they need the "plan" permission.
+const requirePoster = requirePlan;
 
 /** A lead or the Social team asks for suggestions for the week on screen. Results arrive within the hour. */
 export async function requestSuggestions(form: FormData) {
@@ -114,4 +111,11 @@ export async function dismissSuggestion(form: FormData) {
   await requirePoster();
   await createAdminClient().from('ai_suggestions').update({ status: 'dismissed' }).eq('id', str(form, 'id'));
   revalidatePath('/content');
+}
+
+/** Admins can drop an account the AI chose to learn from. */
+export async function removePeerAccount(form: FormData) {
+  await requireAdmin();
+  await createAdminClient().from('ai_peer_accounts').delete().eq('username', str(form, 'username'));
+  revalidatePath('/admin/ai');
 }

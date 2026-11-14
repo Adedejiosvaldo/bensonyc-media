@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { requireMember, isLead } from '@/lib/auth';
+import { requireMember, canRoster, headOf } from '@/lib/auth';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { assignSlot, cancelSwap, generateRoster, takeSwap } from '@/app/actions';
 import { publishRoster } from '@/app/roster-actions';
 import { DutyReply } from '@/components/DutyReply';
@@ -24,11 +25,13 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
   const today = todayLagos();
   const upcoming = parse(today).getUTCDay() === 0 ? today : addDays(weekStart(today), 7);
   const sunday = weekStart(isValidDate(searchParams.week) ? searchParams.week : upcoming);
-  const lead = isLead(member);
+  // "Run the roster" covers every duty; a head can fill their own department's duties.
+  const lead = canRoster(member);
+  const myHead = headOf(member);
 
   const [{ data: rosterWeek }, { data: members }, { data: blockouts }] = await Promise.all([
     supabase.from('roster_weeks').select('id, created_at, published_at, deadline').eq('week_start', sunday).maybeSingle(),
-    supabase.from('members').select(lead ? 'id, full_name, department_id, status, phone' : 'id, full_name, department_id, status').order('full_name').returns<Pick<Member, 'id' | 'full_name' | 'department_id' | 'status' | 'phone'>[]>(),
+    supabase.from('members').select('id, full_name, department_id, status').order('full_name').returns<Pick<Member, 'id' | 'full_name' | 'department_id' | 'status'>[]>(),
     supabase.from('blockouts').select('member_id, start_date, end_date').lte('start_date', addDays(sunday, 6)).gte('end_date', sunday).returns<Pick<Blockout, 'member_id' | 'start_date' | 'end_date'>[]>(),
   ]);
   // A draft roster stays with the leads until it's published.
@@ -54,13 +57,16 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
   const count = (r: RosterSlot['response']) => assigned.filter((x) => x.response === r).length;
   const unnotified = assigned.filter((x) => x.response === 'pending' && !x.notified_at).length;
   const memberById = new Map((members ?? []).map((m) => [m.id, m]));
+  // WhatsApp numbers: only for whoever runs the roster, read by the server.
+  const { data: phones } = lead ? await createAdminClient().from('members').select('id, phone') : { data: [] as { id: string; phone: string | null }[] };
+  const phoneOf = new Map((phones ?? []).map((x) => [x.id, x.phone]));
   const waiting = Array.from(
     assigned
       .filter((x) => x.response === 'pending')
       .reduce((acc, x) => acc.set(x.member_id!, [...(acc.get(x.member_id!) ?? []), x]), new Map<string, RosterSlot[]>()),
   ).map(([id, duties]) => {
     const m = memberById.get(id);
-    return { id, name: m?.full_name ?? 'Someone', link: waNudgeLink(m?.phone ?? null, (m?.full_name ?? '').split(' ')[0] || 'there', duties, week?.deadline ?? null) };
+    return { id, name: m?.full_name ?? 'Someone', link: waNudgeLink(phoneOf.get(id) ?? null, (m?.full_name ?? '').split(' ')[0] || 'there', duties, week?.deadline ?? null) };
   });
   const by = deadlineLabel(week?.deadline ?? null);
 
@@ -219,7 +225,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
                                 {swap && <span className="chip ml-auto bg-gold text-plum-950">Needs cover</span>}
                                 {!swap && blocked && <span className="chip ml-auto bg-plum-100 text-ink"><Icon name="calendarOff" className="h-3 w-3" /> Away</span>}
                               </div>
-                              {lead ? (
+                              {lead || myHead === d.id ? (
                                 <form action={assignSlot} className="mt-1.5">
                                   <input type="hidden" name="id" value={s.id} />
                                   <AutoSubmitSelect name="member_id" label={`Who’s on ${s.duty}, ${svc.label}`} defaultValue={s.member_id ?? ''} options={opts} />

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { canPostSocial, isAdmin, requireMember } from '@/lib/auth';
+import { canPlan, canPostSocial, isAdmin, requireMember } from '@/lib/auth';
 import { saveFollowersToPlan, syncSocialNow } from '@/app/social-actions';
 import { PageHeader } from '@/components/PageHeader';
 import { SubmitButton } from '@/components/SubmitButton';
@@ -38,7 +38,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: { n
   const sort = (Object.keys(SORTS).includes(searchParams.sort ?? '') ? searchParams.sort : 'recent') as keyof typeof SORTS;
   const range: Range = (RANGES as readonly number[]).includes(Number(searchParams.range)) ? (Number(searchParams.range) as Range) : 30;
 
-  const aiRun = canPostSocial(member) ? await latestAiRun() : null;
+  const aiRun = canPlan(member) ? await latestAiRun() : null;
   const [{ data: daily }, { data: media }, { data: month }] = await Promise.all([
     supabase.from('social_account_stats').select('*').gte('day', addDays(today, -100)).order('day').returns<AccountStat[]>(),
     supabase.from('social_media_stats').select('*').order('posted_at', { ascending: false }).limit(300).returns<MediaStat[]>(),

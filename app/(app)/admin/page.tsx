@@ -1,5 +1,7 @@
 import Link from 'next/link';
-import { requireLead, isAdmin } from '@/lib/auth';
+import { headOf, isAdmin, requireTeamView } from '@/lib/auth';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { AdminTabs } from '@/components/AdminTabs';
 import { PageHeader } from '@/components/PageHeader';
 import { ProgressBar } from '@/components/Progress';
 import { Icon } from '@/components/Icon';
@@ -12,10 +14,14 @@ import { label } from '@/lib/dates';
 export const metadata = { title: 'Admin' };
 
 export default async function AdminPage({ searchParams }: { searchParams: { dept?: string } }) {
-  const { supabase, member } = await requireLead();
+  const { supabase, member } = await requireTeamView();
   const admin = isAdmin(member);
+  // Heads see only their own department. Contact details are read by the server, after this check.
+  const myDept = admin ? null : headOf(member);
+  let membersQuery = createAdminClient().from('members').select('*').order('department_id').order('full_name');
+  if (myDept) membersQuery = membersQuery.eq('department_id', myDept);
   const [{ data: members }, { data: progress }, { data: pledges }] = await Promise.all([
-    supabase.from('members').select('*').order('department_id').order('full_name').returns<Member[]>(),
+    membersQuery.returns<Member[]>(),
     supabase.from('lesson_progress').select('member_id, lesson_slug'),
     supabase.from('pledges').select('member_id, agreed_at'),
   ]);
@@ -45,19 +51,15 @@ export default async function AdminPage({ searchParams }: { searchParams: { dept
   return (
     <div>
       <PageHeader
-        eyebrow="Unit overview"
-        title="Admin"
-        actions={
-          admin && (
-            <>
-              <Link href="/admin/plan" className="btn-ghost"><Icon name="plan" className="h-4 w-4" /> Edit 9-month plan</Link>
-              <MemberDialog departments={depts} />
-            </>
-          )
-        }
+        eyebrow={admin ? 'Admin' : 'Your department'}
+        title={admin ? 'Members' : `${departmentById(myDept)?.name ?? 'My'} team`}
+        actions={admin && <MemberDialog departments={depts} />}
       >
-        Who has registered, finished onboarding and signed the pledge.{admin ? ' Add, edit or remove members here.' : ''}
+        {admin
+          ? 'Who has registered, finished onboarding and signed the pledge. Add, edit or remove members, and choose who can post, plan content or run the roster.'
+          : 'Who in your department has registered, finished onboarding and signed the pledge. Ask an admin to add or change members.'}
       </PageHeader>
+      {admin && <AdminTabs current="/admin" />}
 
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
         {stat(registered, active.length, 'Registered')}
@@ -65,12 +67,12 @@ export default async function AdminPage({ searchParams }: { searchParams: { dept
         {stat(finished, active.length, 'Finished onboarding')}
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      {admin && <div className="mb-4 flex flex-wrap gap-2">
         <Link href="/admin" aria-current={!searchParams.dept ? 'true' : undefined} className={`chip min-h-9 px-3 ${!searchParams.dept ? 'bg-magenta text-white' : 'bg-plum-100 text-ink hover:bg-plum-100/70'}`}>All</Link>
         {DEPARTMENTS.map((d) => (
           <Link key={d.id} href={`/admin?dept=${d.id}`} aria-current={searchParams.dept === d.id ? 'true' : undefined} className={`chip min-h-9 px-3 ${searchParams.dept === d.id ? 'bg-magenta text-white' : 'bg-plum-100 text-ink hover:bg-plum-100/70'}`}>{d.name}</Link>
         ))}
-      </div>
+      </div>}
 
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[760px] text-left text-sm">
@@ -99,6 +101,13 @@ export default async function AdminPage({ searchParams }: { searchParams: { dept
                   <td className="px-4 py-3">
                     <p className="font-semibold">{departmentById(m.department_id)?.name ?? '—'}</p>
                     <p className="text-xs capitalize text-muted">{m.role}</p>
+                    {m.role !== 'admin' && (m.grants ?? []).length > 0 && (
+                      <p className="mt-1 flex flex-wrap gap-1">
+                        {(m.grants ?? []).map((g) => (
+                          <span key={g} className="chip bg-plum-100 px-2 py-0.5 text-[11px] normal-case tracking-normal text-ink">{g === 'post' ? 'Posts' : g === 'plan' ? 'Plans content' : 'Runs roster'}</span>
+                        ))}
+                      </p>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`chip ${STATUS[m.status].cls}`}>{STATUS[m.status].text}</span>

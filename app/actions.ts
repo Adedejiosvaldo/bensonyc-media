@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
-import { requireAdmin, requireLead, requireMember } from '@/lib/auth';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { canRoster, headOf, requireAdmin, requireMember, requirePlan, requireRoster } from '@/lib/auth';
 import { RULES_VERSION } from '@/content/rules';
 import { LESSONS } from '@/content/lessons';
 import { departmentById } from '@/content/departments';
@@ -125,7 +126,7 @@ function welcomeEmailHtml(member: Member, site: string) {
 /* ───────── Content board ───────── */
 
 export async function generateContentWeek(form: FormData) {
-  const { supabase } = await requireLead();
+  const { supabase } = await requirePlan();
   const sunday = weekStart(str(form, 'week'));
   const replace = form.get('replace') === 'on';
   const { data: months } = await supabase.from('plan_months').select('*').returns<PlanMonth[]>();
@@ -159,7 +160,7 @@ export async function updateContentItem(form: FormData) {
 /* ───────── Roster ───────── */
 
 export async function generateRoster(form: FormData) {
-  const { supabase, member } = await requireLead();
+  const { supabase, member } = await requireRoster();
   const sunday = weekStart(str(form, 'week'));
   const midweek = form.get('midweek') === 'on';
   const special = form.get('special') === 'on';
@@ -188,8 +189,13 @@ export async function generateRoster(form: FormData) {
 }
 
 export async function assignSlot(form: FormData) {
-  const { supabase } = await requireLead();
+  const { supabase, member } = await requireMember();
   const id = str(form, 'id');
+  // The roster permission covers every duty; a head can fill their own department's.
+  if (!canRoster(member)) {
+    const { data: slot } = await supabase.from('roster_slots').select('department_id').eq('id', id).maybeSingle();
+    if (!slot || slot.department_id !== headOf(member)) return;
+  }
   await supabase.from('roster_slots').update({ member_id: str(form, 'member_id') || null }).eq('id', id);
   // A lead moving the slot by hand settles any open swap request on it.
   const { data: open } = await supabase.from('swap_requests').select('id').eq('slot_id', id).eq('status', 'open').maybeSingle();
@@ -253,7 +259,8 @@ export async function requestSwap(form: FormData) {
   // Let the rest of the department know (best effort).
   const { data: slot } = await supabase.from('roster_slots').select('*').eq('id', slotId).maybeSingle<RosterSlot>();
   if (slot) {
-    const { data: team } = await supabase
+    // Contact details are server-only: read them with the service client.
+    const { data: team } = await createAdminClient()
       .from('members')
       .select('email, status')
       .eq('department_id', slot.department_id)
@@ -283,7 +290,7 @@ export async function takeSwap(form: FormData) {
   const { data: swap } = await supabase.from('swap_requests').select('from_member, slot_id').eq('id', swapId).maybeSingle();
   if (swap) {
     const [{ data: from }, { data: slot }] = await Promise.all([
-      supabase.from('members').select('email, full_name').eq('id', swap.from_member).maybeSingle(),
+      createAdminClient().from('members').select('email, full_name').eq('id', swap.from_member).maybeSingle(),
       supabase.from('roster_slots').select('*').eq('id', swap.slot_id).maybeSingle<RosterSlot>(),
     ]);
     if (from?.email && slot) {

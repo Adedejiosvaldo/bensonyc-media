@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireMember, isLead, isAdmin, canPostSocial } from '@/lib/auth';
+import { requireMember, isAdmin, canPlan, headOf } from '@/lib/auth';
 import { generateContentWeek, updateContentItem } from '@/app/actions';
 import { PageHeader } from '@/components/PageHeader';
 import { Icon } from '@/components/Icon';
@@ -22,8 +22,11 @@ export default async function ContentPage({ searchParams }: { searchParams: { we
   const { supabase, member } = await requireMember();
   const today = todayLagos();
   const sunday = weekStart(isValidDate(searchParams.week) ? searchParams.week : today);
-  const lead = isLead(member);
-  const poster = canPostSocial(member);
+  // "Plan content" builds the board and uses AI ideas; a head manages their own department's items.
+  const lead = canPlan(member);
+  const poster = lead;
+  const myHead = headOf(member);
+  const canEdit = (i: ContentItem) => lead || (!!myHead && i.department_id === myHead);
 
   const [{ data: items }, { data: months }, { data: members }, ai] = await Promise.all([
     supabase.from('content_items').select('*').eq('week_start', sunday).order('sort').returns<ContentItem[]>(),
@@ -122,14 +125,26 @@ export default async function ContentPage({ searchParams }: { searchParams: { we
                         <p className="mt-1.5 whitespace-pre-line break-words text-xs leading-relaxed text-muted">{i.brief}</p>
                       </details>
                       <div className="mt-3 grid gap-1.5">
-                        <form action={updateContentItem}>
-                          <input type="hidden" name="id" value={i.id} />
-                          <AutoSubmitSelect name="owner_id" label={`Owner of ‘${i.title}’`} defaultValue={i.owner_id ?? ''} options={owners} />
-                        </form>
-                        <form action={updateContentItem}>
-                          <input type="hidden" name="id" value={i.id} />
-                          <AutoSubmitSelect name="status" label={`Status of ‘${i.title}’`} defaultValue={i.status} options={STATUSES} />
-                        </form>
+                        {canEdit(i) ? (
+                          <form action={updateContentItem}>
+                            <input type="hidden" name="id" value={i.id} />
+                            <AutoSubmitSelect name="owner_id" label={`Owner of ‘${i.title}’`} defaultValue={i.owner_id ?? ''} options={owners} />
+                          </form>
+                        ) : i.owner_id ? (
+                          <p className="text-xs font-semibold text-muted">{i.owner_id === member.id ? 'Yours' : owners.find((o) => o.value === i.owner_id)?.label ?? 'Taken'}</p>
+                        ) : (
+                          <form action={updateContentItem}>
+                            <input type="hidden" name="id" value={i.id} />
+                            <input type="hidden" name="owner_id" value={member.id} />
+                            <SubmitButton className="btn-ghost min-h-9 w-full px-3 py-1.5 text-xs" pendingText="Taking…">Take this<span className="sr-only">: {i.title}</span></SubmitButton>
+                          </form>
+                        )}
+                        {(canEdit(i) || i.owner_id === member.id) && (
+                          <form action={updateContentItem}>
+                            <input type="hidden" name="id" value={i.id} />
+                            <AutoSubmitSelect name="status" label={`Status of ‘${i.title}’`} defaultValue={i.status} options={STATUSES} />
+                          </form>
+                        )}
                       </div>
                     </article>
                   ))}

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { requireAdmin } from '@/lib/auth';
 import { updatePlanMonth } from '@/app/actions';
 import { PageHeader } from '@/components/PageHeader';
+import { AdminTabs } from '@/components/AdminTabs';
 import { SubmitButton } from '@/components/SubmitButton';
 import { Icon } from '@/components/Icon';
 import { label } from '@/lib/dates';
@@ -15,7 +16,8 @@ export default async function EditPlan() {
   return (
     <div>
       <Link href="/plan" className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-muted hover:text-accent"><Icon name="back" className="h-4 w-4" /> 9-month plan</Link>
-      <PageHeader eyebrow="Admin" title="Edit the plan">Changes flow into every weekly board you generate after saving. Record the real follower count at each month end.</PageHeader>
+      <PageHeader eyebrow="Admin" title="9-month plan">Changes flow into every weekly board you generate after saving. Record the real follower count at each month end.</PageHeader>
+      <AdminTabs current="/admin/plan" />
       <div className="space-y-4">
         {(months ?? []).map((m) => (
           <form key={m.id} action={updatePlanMonth} className="card grid gap-4 p-5 md:grid-cols-2">

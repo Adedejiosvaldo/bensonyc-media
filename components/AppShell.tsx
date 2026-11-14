@@ -2,7 +2,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Logo } from './Logo';
+import { Suspense } from 'react';
 import { Icon } from './Icon';
+import { ViewAsBanner, ViewAsSwitch } from './ViewAsSwitch';
 
 type NavItem = { href: string; label: string; icon: string; lead?: boolean; group: string };
 
@@ -23,10 +25,11 @@ const NAV: NavItem[] = [
 
 const MORE: NavItem = { href: '/more', label: 'More', icon: 'more', group: '' };
 
-export function AppShell({ name, role, onboarded, children }: { name: string; role: string; onboarded: boolean; children: React.ReactNode }) {
+export function AppShell({ name, role, onboarded, realAdmin = false, viewAs = null, children }: { name: string; role: string; onboarded: boolean; realAdmin?: boolean; viewAs?: string | null; children: React.ReactNode }) {
   const path = usePathname();
   const lead = role === 'admin' || role === 'head';
-  const items = NAV.filter((n) => !n.lead || lead);
+  // Heads get the team view of their own department; admins get the full Admin area.
+  const items = NAV.filter((n) => !n.lead || lead).map((n) => (n.href === '/admin' && role !== 'admin' ? { ...n, label: 'My team', group: 'Team' } : n));
   const active = (href: string) => path === href || path.startsWith(href + '/');
   const groups: { name: string; items: NavItem[] }[] = [];
   for (const n of items) {
@@ -99,6 +102,11 @@ export function AppShell({ name, role, onboarded, children }: { name: string; ro
               </button>
             </form>
           </div>
+          {realAdmin && (
+            <Suspense>
+              <ViewAsSwitch current={viewAs} />
+            </Suspense>
+          )}
         </div>
       </aside>
 
@@ -117,6 +125,13 @@ export function AppShell({ name, role, onboarded, children }: { name: string; ro
       </header>
 
       <main id="main" className="min-w-0 px-4 pb-28 pt-6 sm:px-8 lg:px-12 lg:pb-16 lg:pt-12">
+        {viewAs && (
+          <div className="mx-auto max-w-6xl">
+            <Suspense>
+              <ViewAsBanner current={viewAs} />
+            </Suspense>
+          </div>
+        )}
         <div className="mx-auto max-w-6xl">{children}</div>
       </main>
 
