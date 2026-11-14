@@ -17,7 +17,7 @@ export async function syncStats(): Promise<{ platform: Platform; ok: boolean; me
       const me = await igMe(ig.access_token, ig.account_id);
       await db.from('social_account_stats').upsert({ platform: 'instagram', day, followers: me.followers_count ?? null, following: me.follows_count ?? null, posts: me.media_count ?? null }, { onConflict: 'platform,day' });
       if (me.username && me.username !== ig.username) await db.from('social_accounts').update({ username: me.username }).eq('platform', 'instagram');
-      const media = await igRecentMedia(ig);
+      const media = await igRecentMedia(ig, 60);
       if (media.length) await db.from('social_media_stats').upsert(media.map((m) => ({ ...m, platform: 'instagram', updated_at: new Date().toISOString() })), { onConflict: 'platform,remote_id' });
       results.push({ platform: 'instagram', ok: true, message: `${media.length} posts updated` });
     } catch (e) {
