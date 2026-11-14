@@ -13,19 +13,43 @@ type Step = 'edit' | 'review' | 'done';
 const MB = 1024 * 1024;
 const NAME: Record<Platform, string> = { instagram: 'Instagram', tiktok: 'TikTok' };
 
-/** Instagram's API only takes JPEG photos, so convert anything else in the browser. */
-async function toJpeg(file: File): Promise<Blob> {
-  if (file.type === 'image/jpeg') return file;
+/** Instagram feed photos must sit between 4:5 portrait and 1.91:1 landscape; anything outside is rejected. */
+const IG_MIN_RATIO = 4 / 5;
+const IG_MAX_RATIO = 1.91;
+
+/** Where a photo needs trimming for Instagram, as a source rectangle, or null when it already fits. */
+function igCrop(w: number, h: number) {
+  const r = w / h;
+  if (r < IG_MIN_RATIO) {
+    const ch = Math.round(w / IG_MIN_RATIO);
+    return { sx: 0, sy: Math.round((h - ch) / 2), sw: w, sh: ch };
+  }
+  if (r > IG_MAX_RATIO) {
+    const cw = Math.round(h * IG_MAX_RATIO);
+    return { sx: Math.round((w - cw) / 2), sy: 0, sw: cw, sh: h };
+  }
+  return null;
+}
+
+/**
+ * Instagram's API only takes JPEG photos, so convert anything else in the browser. When Instagram is a
+ * target, photos taller than 4:5 (a normal 9:16 phone photo) are trimmed top and bottom to 4:5, centred,
+ * and very wide panoramas are trimmed to 1.91:1, so Instagram accepts them.
+ */
+async function toJpeg(file: File, fitInstagram: boolean): Promise<Blob> {
   const bmp = await createImageBitmap(file);
+  const crop = fitInstagram ? igCrop(bmp.width, bmp.height) : null;
+  if (file.type === 'image/jpeg' && !crop) return file;
+  const src = crop ?? { sx: 0, sy: 0, sw: bmp.width, sh: bmp.height };
   const max = 2160;
-  const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const scale = Math.min(1, max / Math.max(src.sw, src.sh));
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bmp.width * scale);
-  canvas.height = Math.round(bmp.height * scale);
+  canvas.width = Math.round(src.sw * scale);
+  canvas.height = Math.round(src.sh * scale);
   const ctx = canvas.getContext('2d')!;
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(bmp, src.sx, src.sy, src.sw, src.sh, 0, 0, canvas.width, canvas.height);
   return new Promise((ok, fail) => canvas.toBlob((b) => (b ? ok(b) : fail(new Error('That photo couldn’t be converted. Try saving it as a JPEG first.'))), 'image/jpeg', 0.92));
 }
 
@@ -113,7 +137,7 @@ export function Composer({ connected, items, tiktokMode, storage, admin }: { con
       for (const [i, f] of files.entries()) {
         const label = `Uploading ${i + 1} of ${files.length}`;
         setBusy(`${label}…`);
-        const body = f.type === 'image' ? await toJpeg(f.file) : f.file;
+        const body = f.type === 'image' ? await toJpeg(f.file, platforms.includes('instagram')) : f.file;
         const mime = f.type === 'image' ? 'image/jpeg' : f.file.type || 'video/mp4';
         const slot = await prepareUpload({ name: f.file.name, type: mime, size: body.size });
         if (slot.error || !slot.path || !slot.url) throw new UploadError('The upload couldn’t start. Try again in a minute.', slot.error ?? 'prepareUpload returned no path.');
@@ -223,7 +247,7 @@ export function Composer({ connected, items, tiktokMode, storage, admin }: { con
       <label className="group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line p-8 text-center transition-colors duration-150 focus-within:border-magenta hover:border-magenta/60">
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-magenta/10 text-accent"><Icon name="upload" className="h-6 w-6" /></span>
         <span className="font-bold">Add photos or a video</span>
-        <span className="text-xs text-muted">From your camera roll. Several photos make a carousel on Instagram and a photo post on TikTok.</span>
+        <span className="text-xs text-muted">From your camera roll. Several photos make a carousel on Instagram and a photo post on TikTok. Videos go up as Reels: vertical 9:16 works best.</span>
         <input type="file" accept="image/*,video/*" multiple className="sr-only" onChange={(e) => { pick(e.target.files); e.target.value = ''; }} />
       </label>
 
@@ -254,6 +278,13 @@ export function Composer({ connected, items, tiktokMode, storage, admin }: { con
             </li>
           ))}
         </ol>
+      )}
+
+      {images > 0 && platforms.includes('instagram') && (
+        <p className="-mt-2 flex items-start gap-2 text-xs text-muted">
+          <Icon name="eye" className="mt-px h-3.5 w-3.5 shrink-0" />
+          Instagram takes photos from 4:5 portrait to 1.91:1 landscape. Taller photos, like a normal 9:16 phone photo, are trimmed top and bottom to 4:5, so keep faces in the middle.
+        </p>
       )}
 
       <div>

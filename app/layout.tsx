@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: 'Onboarding, roster and content plan for the MFM Benson Youth Church media unit.',
 };
 
-export const viewport: Viewport = { themeColor: '#2B0A2C', width: 'device-width', initialScale: 1, viewportFit: 'cover' };
+export const viewport: Viewport = { themeColor: '#FBF8FB', width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
