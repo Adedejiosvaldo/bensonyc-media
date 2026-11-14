@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-10T16:58:29.866Z",
+  "title": "Design System: Benson YC Media + MFM Benson Youth Church",
+  "extensions": {
+    "colorMeta": {
+      "media-paper": {
+        "role": "neutral",
+        "displayName": "Call-Sheet Paper",
+        "canonical": "#FFF3DF",
+        "tonalRamp": ["#201F1C", "#33302A", "#4D4638", "#685F4A", "#85795E", "#A79773", "#D0BD94", "#FFF3DF"]
+      },
+      "media-ink": {
+        "role": "primary",
+        "displayName": "Deep Crew Ink",
+        "canonical": "#1E0820",
+        "tonalRamp": ["#1D061F", "#2D1030", "#3B1740", "#4D2054", "#63306B", "#7D4A85", "#AB80B2", "#F1E5F3"]
+      },
+      "media-quiet": {
+        "role": "neutral",
+        "displayName": "Media Quiet Ink",
+        "canonical": "#544654",
+        "tonalRamp": ["#1D181E", "#312B33", "#443B47", "#544654", "#706173", "#8E8390", "#B7ACB9", "#F0EDF1"]
+      },
+      "media-rule": {
+        "role": "neutral",
+        "displayName": "Media Ruled Lines",
+        "canonical": "rgb(30 8 32 / .24)",
+        "tonalRamp": ["#1D061F", "#2D1030", "#3B1740", "#4D2054", "#63306B", "#7D4A85", "#AB80B2", "#F1E5F3"]
+      },
+      "media-accent": {
+        "role": "secondary",
+        "displayName": "MFM Magenta",
+        "canonical": "#D6197A",
+        "tonalRamp": ["#260815", "#4A0D2C", "#701342", "#971858", "#BD1E6B", "#D94889", "#E88DB5", "#F7E2EC"]
+      },
+      "church-night": {
+        "role": "primary",
+        "displayName": "Church Night Plum",
+        "canonical": "#1E0820",
+        "tonalRamp": ["#1D061F", "#2D1030", "#3B1740", "#4D2054", "#63306B", "#7D4A85", "#AB80B2", "#F1E5F3"]
+      },
+      "church-plum": {
+        "role": "secondary",
+        "displayName": "Benson Plum",
+        "canonical": "#2B0A2C",
+        "tonalRamp": ["#1A051B", "#2B0A2C", "#411347", "#571B61", "#70327A", "#8D5297", "#B98CC0", "#F2E9F5"]
+      },
+      "church-magenta": {
+        "role": "secondary",
+        "displayName": "Church MFM Magenta",
+        "canonical": "#D6197A",
+        "tonalRamp": ["#260815", "#4A0D2C", "#701342", "#971858", "#BD1E6B", "#D94889", "#E88DB5", "#F7E2EC"]
+      },
+      "church-white": {
+        "role": "neutral",
+        "displayName": "Church White",
+        "canonical": "#FFFDF8",
+        "tonalRamp": ["#1F1E1A", "#33312B", "#4E4B40", "#696555", "#898575", "#A8A493", "#C8C5B7", "#FFFDF8"]
+      },
+      "church-gold": {
+        "role": "tertiary",
+        "displayName": "Flame Gold",
+        "canonical": "#F6B40E",
+        "tonalRamp": ["#261C02", "#4D3806", "#73520A", "#996D0C", "#B88A09", "#D9A70B", "#F0D26A", "#FFF4C9"]
+      }
+    },
+    "typographyMeta": {
+      "media-display": {"displayName": "Crew Display", "purpose": "Condensed call-sheet headlines and department names."},
+      "church-display": {"displayName": "Wayfinding Display", "purpose": "High-clarity welcome and visitor headings."},
+      "body": {"displayName": "Shared Body", "purpose": "Readable supporting information across both sites."}
+    },
+    "shadows": [],
+    "motion": [
+      {"name": "site-action", "value": "160ms ease", "purpose": "Small color transitions on action hover and focus; no scroll-driven motion."}
+    ],
+    "breakpoints": [
+      {"name": "phone", "value": "420px"},
+      {"name": "mobile", "value": "780px"},
+      {"name": "desktop", "value": "1024px"},
+      {"name": "wide", "value": "1280px"}
+    ]
+  },
+  "components": [
+    {
+      "name": "Media join action",
+      "kind": "button",
+      "refersTo": "media-action-primary",
+      "description": "Primary recruitment action on the call sheet.",
+      "html": "<a class=\"ds-media-action\" href=\"/join\">Join the media unit <span aria-hidden=\"true\">→</span></a>",
+      "css": ".ds-media-action{display:inline-flex;align-items:center;gap:12px;min-height:48px;padding:12px 16px;border:1px solid #D6197A;background:#D6197A;color:#FFFFFF;font:800 13px/1.25 'Plus Jakarta Sans',sans-serif;text-decoration:none}.ds-media-action:hover{background:#A30F5E;border-color:#A30F5E}.ds-media-action:focus-visible{outline:2px solid #1E0820;outline-offset:3px}"
+    },
+    {
+      "name": "Church directions action",
+      "kind": "button",
+      "refersTo": "church-action-gold",
+      "description": "Primary arrival action on the church wayfinding path.",
+      "html": "<a class=\"ds-church-action\" href=\"#\">Get directions</a>",
+      "css": ".ds-church-action{display:inline-flex;align-items:center;min-height:46px;padding:11px 14px;border:1px solid #F6B40E;background:#F6B40E;color:#1E0820;font:800 12px/1.3 'Plus Jakarta Sans',sans-serif;text-decoration:none}.ds-church-action:hover{background:#FFFDF8;border-color:#FFFDF8}.ds-church-action:focus-visible{outline:2px solid #FFFDF8;outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Two doors, two jobs: the media crew call sheet and the church arrival wayfinding system.",
+    "overview": "The media site translates the crew call sheet into a working recruitment and department index. The church site uses deep-plum wayfinding to guide a first-time visitor through when, where, and what to expect. They share MFM affiliation and selected brand colors, but never share one blended landing-page hierarchy.",
+    "keyCharacteristics": [
+      "Media: warm paper, ruled call-sheet structure, condensed display type.",
+      "Church: deep plum, gold route markers, visitor-first information.",
+      "Both: square actions, clear cross-site links, factual content only."
+    ],
+    "rules": [
+      {"name": "The Two-Site Rule", "body": "A link may connect the destinations; a page must not combine their content hierarchy or visual system.", "section": "layout"}
+    ],
+    "dos": [
+      "Do keep the media call sheet and church arrival system distinct.",
+      "Do verify service logistics before representing them as confirmed."
+    ],
+    "donts": [
+      "Don't recombine the church and media websites into one public homepage.",
+      "Don't substitute invented photos, testimonials, or addresses for real content."
+    ]
+  }
+}

@@ -8,8 +8,8 @@ The web app for the MFM Benson Youth Church media unit. It covers onboarding, th
 
 | Area | Who | What it does |
 | --- | --- | --- |
-| Landing `/` | Anyone | The media unit's public page: a scroll-driven 3D story (a phone standing up, a camera viewfinder, departments on a turning ring), the live follower count and a join button |
-| Church `/church` | Anyone | The church's own public page: doors that open as you scroll, a live countdown to Sunday, directions and "add to calendar", what a first visit is like, the year ahead (from the 9-month plan) and the latest Instagram posts. Edit the facts in `content/church.ts` |
+| Media site `/` | Anyone | The media unit's public page: crew call sheet, department directory, weekly production rhythm, recruitment and member sign-in. The authenticated workspace contains roster, onboarding, publishing and planning tools. |
+| Church site `/church` | Anyone | A separate visitor-first church site: Sunday arrival details, directions and calendar, first-visit guidance, the year ahead (from the 9-month plan), and Instagram updates. On the church domain, `CHURCH_HOST` serves this at `/`. Edit facts in `content/church.ts`. |
 | Sign in `/login` | Anyone | Magic-link email, no passwords |
 | Join `/join` | New members | Name, WhatsApp number, department. It claims a pre-listed name (e.g. "David", Projection) automatically |
 | Onboarding `/onboarding` | Members | 6 lessons: welcome, brand, rules and pledge, your department, how a week works, the 9-month plan. Progress is saved |
@@ -100,7 +100,7 @@ With R2 on a custom domain, you can verify that domain with TikTok for photo pos
 
 ## Church page on its own domain
 
-`/church` works straight away. To make it the homepage of a separate domain (e.g. `bensonyc.org`), add that domain to the same Vercel project and set `CHURCH_HOST=bensonyc.org`. Visitors to that domain get the church page at `/`, while the media app keeps its own domain.
+`/church` works straight away. To make it the homepage of a separate domain (e.g. `bensonyc.org`), add that domain to the same Vercel project and set `CHURCH_HOST=bensonyc.org`. Visitors to that domain get the church website at `/`; the media website stays rooted at its own `NEXT_PUBLIC_SITE_URL`. Each site has its own homepage and visual system, with explicit links between them.
 
 Before sharing it, confirm the service time and address in `content/church.ts` (marked CONFIRM).
 
