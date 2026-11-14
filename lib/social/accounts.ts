@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { igRefresh } from './instagram';
+import { igRefresh, igUnified } from './instagram';
 import { ttRefresh } from './tiktok';
 import type { Platform, SocialAccount } from './types';
 
@@ -19,7 +19,8 @@ export async function getAccount(platform: Platform): Promise<SocialAccount | nu
       await db.from('social_accounts').update(patch).eq('platform', platform);
       return { ...data, ...patch };
     }
-    if (platform === 'instagram' && expires - Date.now() < 10 * DAY) {
+    // Unified-login tokens are system-user tokens with no refresh call; only Instagram-login tokens refresh.
+    if (platform === 'instagram' && !igUnified() && expires - Date.now() < 10 * DAY) {
       const t = await igRefresh(data.access_token);
       await db.from('social_accounts').update(t).eq('platform', platform);
       return { ...data, ...t };
