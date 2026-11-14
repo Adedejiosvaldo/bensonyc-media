@@ -12,6 +12,7 @@ import { label, todayLagos, weekStart } from '@/lib/dates';
 import { PLATFORM_NAME, type Platform, type SocialPost, type SocialTarget, type TargetStatus } from '@/lib/social/types';
 import type { ContentItem, Member } from '@/lib/types';
 import { ConfirmSubmit } from '@/components/ConfirmSubmit';
+import { EmptyState } from '@/components/EmptyState';
 import { Composer } from './Composer';
 import { Poller } from './Poller';
 
@@ -59,14 +60,19 @@ export default async function SocialPage({ searchParams }: { searchParams: { not
       {searchParams.error && <p role="alert" className="alert-danger">{searchParams.error}</p>}
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <section className="card p-6">
+        <section className={`card p-6 ${!poster || connected.length === 0 ? 'flex items-center justify-center' : ''}`}>
           {!poster ? (
-            <p className="text-muted">Posting is for heads, admins and the Social Media team. You can still see what’s gone out and how it’s doing.</p>
+            <EmptyState icon="eye" title="Posting is for the Social team">
+              Heads, admins and the Social Media department can post. You can still see what’s gone out below, and how it’s doing on Insights.
+            </EmptyState>
           ) : connected.length === 0 ? (
-            <div className="text-center">
-              <h2 className="card-title">No accounts connected</h2>
-              <p className="mt-2 text-muted">{admin ? 'Connect Instagram or TikTok on the right to start posting.' : 'Ask an admin to connect the unit’s Instagram and TikTok.'}</p>
-            </div>
+            <EmptyState icon="share" title="Connect an account to start posting">
+              {admin
+                ? configured.instagram || configured.tiktok
+                  ? 'Connect Instagram or TikTok in Accounts. Once one is linked, the post composer appears here.'
+                  : 'Instagram and TikTok need their app keys set first (see “Social posting” in the README). Then connect them in Accounts.'
+                : 'Ask an admin to connect the unit’s Instagram and TikTok. The post composer appears here once they do.'}
+            </EmptyState>
           ) : (
             <>
               <h2 className="card-title mb-5">New post</h2>
@@ -82,8 +88,8 @@ export default async function SocialPage({ searchParams }: { searchParams: { not
         </section>
 
         <section className="card p-6">
-          <p className="overline mb-1">Accounts</p>
-          <h2 className="mb-4 card-title">Connected</h2>
+          <p className="kicker mb-1">Accounts</p>
+          <h2 className="mb-4 card-title">{connected.length ? `${connected.length} of 2 connected` : 'Not connected yet'}</h2>
           <ul className="space-y-3">
             {(['instagram', 'tiktok'] as Platform[]).map((p) => {
               const c = connections.find((x) => x.platform === p);
@@ -92,7 +98,7 @@ export default async function SocialPage({ searchParams }: { searchParams: { not
               return (
                 <li key={p} className="rounded-2xl bg-plum-100/70 p-4">
                   <div className="flex items-center gap-3">
-                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white ${p === 'instagram' ? 'bg-magenta' : 'bg-plum-900'}`}><Icon name="share" className="h-5 w-5" /></span>
+                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white ${p === 'instagram' ? 'bg-magenta' : 'bg-plum-700'}`}><Icon name="share" className="h-5 w-5" /></span>
                     <div className="min-w-0 flex-1">
                       <p className="font-bold">{PLATFORM_NAME[p]}</p>
                       <p className="truncate text-sm text-muted">{c ? (c.username ? `@${c.username}` : 'Connected') : 'Not connected'}</p>
@@ -111,7 +117,11 @@ export default async function SocialPage({ searchParams }: { searchParams: { not
                         </ConfirmSubmit>
                       </form>
                     ) : (
-                      <a href={`/api/social/connect/${p}`} className="btn-primary px-4 py-2 text-xs">Connect</a>
+                      configured[p] ? (
+                        <a href={`/api/social/connect/${p}`} className="btn-primary min-h-9 px-4 py-2 text-xs">Connect</a>
+                      ) : (
+                        <span className="chip bg-line text-muted">Setup needed</span>
+                      )
                     ))}
                   </div>
                   {admin && soon && <p className="mt-2 text-xs font-bold text-warn-ink">Login expires soon. <a href={`/api/social/connect/${p}`} className="underline">Reconnect</a></p>}
@@ -129,7 +139,9 @@ export default async function SocialPage({ searchParams }: { searchParams: { not
       <section id="recent" className="card scroll-mt-24 p-6">
         <h2 className="mb-4 section-title">Recent posts</h2>
         {(posts ?? []).length === 0 ? (
-          <p className="text-muted">Nothing posted from the app yet.</p>
+          <EmptyState compact icon="upload" title="Nothing posted from the app yet">
+            Posts sent from here show up with their live status and a link to each platform.
+          </EmptyState>
         ) : (
           <ul className="divide-y divide-line">
             {(posts ?? []).map((p) => {

@@ -59,7 +59,7 @@ p { text-wrap: pretty; }
   .eyebrow { @apply text-[11px] font-bold uppercase tracking-[0.14em] text-accent; }
   /* Hierarchy: Anton is for page titles and big numbers only. Inside a page, sections and cards
      are titled in bold sans so one level never shouts as loud as the page itself. */
-  .overline { @apply text-[11px] font-bold uppercase tracking-[0.12em] text-muted; }
+  .kicker { @apply text-[11px] font-bold uppercase tracking-[0.12em] text-muted; }
   .section-title { @apply text-xl font-extrabold tracking-[-0.01em] text-ink; }
   .card-title { @apply text-lg font-bold leading-snug tracking-[-0.01em] text-ink; }
   .stat { @apply font-display text-4xl leading-none tabular-nums text-ink; }

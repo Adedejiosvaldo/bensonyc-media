@@ -15,13 +15,14 @@ export function ProgressBar({ value, max, label, className = '' }: { value: numb
   );
 }
 
+/** Progress ring for dark cards: a faint white track, magenta progress and white figures. */
 export function Ring({ value, max, size = 72 }: { value: number; max: number; size?: number }) {
   const r = (size - 10) / 2;
   const c = 2 * Math.PI * r;
   const pct = max ? value / max : 0;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0" role="img" aria-label={`${value} of ${max} lessons done`}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgb(var(--plum-100))" strokeWidth={8} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgb(255 255 255 / 0.16)" strokeWidth={8} />
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -33,7 +34,7 @@ export function Ring({ value, max, size = 72 }: { value: number; max: number; si
         strokeDasharray={`${c * pct} ${c}`}
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
       />
-      <text x="50%" y="54%" textAnchor="middle" dominantBaseline="middle" className="fill-ink font-display tabular-nums" fontSize={size / 3.6} aria-hidden="true">
+      <text x="50%" y="54%" textAnchor="middle" dominantBaseline="middle" className="fill-white font-display tabular-nums" fontSize={size / 3.6} aria-hidden="true">
         {value}/{max}
       </text>
     </svg>

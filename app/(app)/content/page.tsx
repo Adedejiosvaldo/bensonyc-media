@@ -50,9 +50,9 @@ export default async function ContentPage({ searchParams }: { searchParams: { we
 
       {month && (
         <div className="mb-6 grid gap-3 sm:grid-cols-3">
-          <div className="card p-4"><p className="text-xs font-bold uppercase tracking-wider text-muted">Month theme</p><p className="mt-1 font-display text-xl uppercase">{month.theme}</p></div>
-          <div className="card p-4"><p className="text-xs font-bold uppercase tracking-wider text-muted">Big moment</p><p className="mt-1 font-semibold leading-snug">{month.big_moment}</p></div>
-          <div className="card p-4"><p className="text-xs font-bold uppercase tracking-wider text-muted">Posted</p><p className="mt-1 font-display text-3xl tabular-nums">{posted}<span className="text-muted">/{list.length || 0}</span></p></div>
+          <div className="card p-4"><p className="kicker">Month theme</p><p className="mt-1 text-lg font-extrabold leading-snug tracking-[-0.01em]">{month.theme}</p></div>
+          <div className="card p-4"><p className="kicker">Big moment</p><p className="mt-1 font-semibold leading-snug">{month.big_moment}</p></div>
+          <div className="card p-4"><p className="kicker">Posted</p><p className="mt-1 font-display text-3xl tabular-nums">{posted}<span className="text-muted">/{list.length || 0}</span></p></div>
         </div>
       )}
 

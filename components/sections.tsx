@@ -12,7 +12,7 @@ import { PILLAR_STYLE } from './StatusChip';
 function SectionTitle({ children, kicker }: { children: React.ReactNode; kicker?: string }) {
   return (
     <div className="mb-4">
-      {kicker && <p className="overline mb-1">{kicker}</p>}
+      {kicker && <p className="kicker mb-1">{kicker}</p>}
       <h2 className="section-title sm:text-2xl">{children}</h2>
     </div>
   );
@@ -62,12 +62,12 @@ export function BrandGuide() {
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="card p-6">
-          <p className="overline mb-3">Display · Anton</p>
+          <p className="kicker mb-3">Display · Anton</p>
           <p className="font-display text-6xl uppercase leading-none">Citadel of Greatness</p>
           <p className="mt-4 text-sm text-muted">Headlines only. ALL CAPS, tight spacing, six words max.</p>
         </div>
         <div className="card p-6">
-          <p className="overline mb-3">Text · Plus Jakarta Sans</p>
+          <p className="kicker mb-3">Text · Plus Jakarta Sans</p>
           <p className="text-2xl font-extrabold">Sunday · 8:00am</p>
           <p className="mt-1 text-lg font-medium">MFM Benson Youth Church, Ikorodu</p>
           <p className="mt-4 text-sm text-muted">Dates, times, venues, captions. Bold (700) for info, extra bold (800) for burned-in reel captions. A script font is allowed for one event word only.</p>
@@ -202,7 +202,7 @@ export function RulesView() {
 export function DepartmentView({ dept }: { dept: DepartmentGuide }) {
   const col = (title: string, items: string[]) => (
     <div className="card p-5">
-      <p className="overline mb-3">{title}</p>
+      <p className="kicker mb-3">{title}</p>
       <ul className="space-y-2">{items.map((t) => <li key={t} className="flex gap-2 text-[14.5px] leading-snug"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-magenta" />{t}</li>)}</ul>
     </div>
   );
@@ -247,7 +247,7 @@ export function MasterPlan({ months, currentFollowers }: { months: PlanMonth[]; 
       <div className="card p-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="overline mb-1">Goal</p>
+            <p className="kicker mb-1">Goal</p>
             <p className="font-display text-5xl uppercase leading-none">10,000 by July 2027</p>
             <p className="mt-2 text-sm text-muted">Starting point: 774 followers on 1 Nov 2026. That means passing CCI Ikorodu (6,778) and Harvesters Ikorodu (9,486).</p>
           </div>
