@@ -8,6 +8,7 @@ import { Icon } from '@/components/Icon';
 import { LESSONS } from '@/content/lessons';
 import { DEPARTMENTS, departmentById } from '@/content/departments';
 import type { Member } from '@/lib/types';
+import { AdminSave } from './AdminSave';
 
 export const metadata = { title: 'Admin' };
 
@@ -48,9 +49,9 @@ export default async function AdminPage({ searchParams }: { searchParams: { dept
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
-        <Link href="/admin" className={`chip ${!searchParams.dept ? 'bg-plum-700 text-white' : 'bg-plum-100 text-ink'}`}>All</Link>
+        <Link href="/admin" aria-current={!searchParams.dept ? 'true' : undefined} className={`chip min-h-9 px-3 ${!searchParams.dept ? 'bg-plum-700 text-white' : 'bg-plum-100 text-ink'}`}>All</Link>
         {DEPARTMENTS.map((d) => (
-          <Link key={d.id} href={`/admin?dept=${d.id}`} className={`chip ${searchParams.dept === d.id ? 'bg-plum-700 text-white' : 'bg-plum-100 text-ink'}`}>{d.name}</Link>
+          <Link key={d.id} href={`/admin?dept=${d.id}`} aria-current={searchParams.dept === d.id ? 'true' : undefined} className={`chip min-h-9 px-3 ${searchParams.dept === d.id ? 'bg-plum-700 text-white' : 'bg-plum-100 text-ink'}`}>{d.name}</Link>
         ))}
       </div>
 
@@ -68,34 +69,34 @@ export default async function AdminPage({ searchParams }: { searchParams: { dept
             {all.map((m) => {
               const n = doneBy.get(m.id) ?? 0;
               return (
-                <tr key={m.id} className={m.status === 'inactive' ? 'opacity-50' : ''}>
+                <tr key={m.id}>
                   <td className="px-4 py-3">
-                    <p className="font-bold">{m.full_name}</p>
+                    <p className={`font-bold ${m.status === 'inactive' ? 'text-muted line-through decoration-1' : ''}`}>{m.full_name}</p>
                     <p className="text-xs text-muted">{m.email ?? 'Not registered yet'}{m.phone ? ` · ${m.phone}` : ''}</p>
                   </td>
                   <td className="w-44 px-4 py-3">
                     <p className="mb-1 text-xs font-semibold tabular-nums">{n}/{LESSONS.length}</p>
-                    <ProgressBar value={n} max={LESSONS.length} />
+                    <ProgressBar value={n} max={LESSONS.length} label={`${m.full_name}: lessons done`} />
                   </td>
                   <td className="px-4 py-3">
-                    {signed.has(m.id) ? <span className="chip bg-good/15 text-good">Signed</span> : <span className="chip bg-line text-muted">Not yet</span>}
+                    {signed.has(m.id) ? <span className="chip bg-good/15 text-good-ink"><Icon name="check" className="h-3 w-3" /> Signed</span> : <span className="chip bg-line text-muted">Not yet</span>}
                   </td>
                   <td className="px-4 py-3">
                     {admin ? (
                       <form action={updateMember} className="flex flex-wrap items-center gap-2">
                         <input type="hidden" name="id" value={m.id} />
-                        <select name="department_id" defaultValue={m.department_id ?? ''} className="rounded-lg border border-line bg-card px-2 py-1.5 text-xs font-semibold" aria-label="Department">
+                        <select name="department_id" defaultValue={m.department_id ?? ''} className="select-sm" aria-label={`Department for ${m.full_name}`}>
                           <option value="">—</option>
                           {DEPARTMENTS.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </select>
-                        <select name="role" defaultValue={m.role} className="rounded-lg border border-line bg-card px-2 py-1.5 text-xs font-semibold" aria-label="Role">
+                        <select name="role" defaultValue={m.role} className="select-sm" aria-label={`Role for ${m.full_name}`} data-was={m.role}>
                           <option value="member">Member</option><option value="head">Head</option><option value="admin">Admin</option>
                         </select>
-                        <select name="status" defaultValue={m.status} className="rounded-lg border border-line bg-card px-2 py-1.5 text-xs font-semibold" aria-label="Status">
+                        <select name="status" defaultValue={m.status} className="select-sm" aria-label={`Status for ${m.full_name}`}>
                           <option value="active">Active</option><option value="on_break">On break</option><option value="inactive">Inactive</option>
                         </select>
-                        <input type="date" name="break_until" defaultValue={m.break_until ?? ''} className="rounded-lg border border-line bg-card px-2 py-1 text-xs" aria-label="Break until" />
-                        <SubmitButton className="btn-ghost px-3 py-1.5 text-xs" pendingText="…">Save</SubmitButton>
+                        <input type="date" name="break_until" defaultValue={m.break_until ?? ''} className="select-sm" aria-label={`On break until (${m.full_name})`} />
+                        <AdminSave name={m.full_name} />
                       </form>
                     ) : (
                       <span className="text-sm">{departmentById(m.department_id)?.name ?? '—'} · <span className="capitalize">{m.role}</span></span>

@@ -12,8 +12,8 @@ import { PILLAR_STYLE } from './StatusChip';
 function SectionTitle({ children, kicker }: { children: React.ReactNode; kicker?: string }) {
   return (
     <div className="mb-4">
-      {kicker && <p className="eyebrow mb-1">{kicker}</p>}
-      <h2 className="font-display text-2xl uppercase tracking-wide text-ink sm:text-3xl">{children}</h2>
+      {kicker && <p className="overline mb-1">{kicker}</p>}
+      <h2 className="section-title sm:text-2xl">{children}</h2>
     </div>
   );
 }
@@ -62,12 +62,12 @@ export function BrandGuide() {
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="card p-6">
-          <p className="eyebrow mb-3">Display · Anton</p>
+          <p className="overline mb-3">Display · Anton</p>
           <p className="font-display text-6xl uppercase leading-none">Citadel of Greatness</p>
           <p className="mt-4 text-sm text-muted">Headlines only. ALL CAPS, tight spacing, six words max.</p>
         </div>
         <div className="card p-6">
-          <p className="eyebrow mb-3">Text · Plus Jakarta Sans</p>
+          <p className="overline mb-3">Text · Plus Jakarta Sans</p>
           <p className="text-2xl font-extrabold">Sunday · 8:00am</p>
           <p className="mt-1 text-lg font-medium">MFM Benson Youth Church, Ikorodu</p>
           <p className="mt-4 text-sm text-muted">Dates, times, venues, captions. Bold (700) for info, extra bold (800) for burned-in reel captions. A script font is allowed for one event word only.</p>
@@ -86,7 +86,7 @@ export function BrandGuide() {
           <SectionTitle kicker="The badge">Logo rules</SectionTitle>
           <ul className="grid gap-2 text-[15px] sm:grid-cols-2">
             {['Bottom-left of every graphic, 96px tall on a 1080px canvas', '64px clear space around it', 'Never stretch, recolour, outline or box it', '@mfmbensonyc beside it, small, white or muted'].map((t) => (
-              <li key={t} className="flex gap-2"><Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-magenta" />{t}</li>
+              <li key={t} className="flex gap-2"><Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-accent" />{t}</li>
             ))}
           </ul>
         </div>
@@ -126,12 +126,12 @@ export function BrandGuide() {
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="card p-6">
-          <p className="mb-3 font-display text-xl uppercase tracking-wide text-good">Always</p>
-          <ul className="space-y-2">{DO.map((t) => <li key={t} className="flex gap-2"><Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-good" />{t}</li>)}</ul>
+          <p className="mb-3 font-display text-xl uppercase tracking-wide text-good-ink">Always</p>
+          <ul className="space-y-2">{DO.map((t) => <li key={t} className="flex gap-2"><Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-good-ink" />{t}</li>)}</ul>
         </div>
         <div className="card p-6">
-          <p className="mb-3 font-display text-xl uppercase tracking-wide text-magenta">Never</p>
-          <ul className="space-y-2">{DONT.map((t) => <li key={t} className="flex gap-2"><span className="mt-0.5 font-bold text-magenta">×</span>{t}</li>)}</ul>
+          <p className="mb-3 font-display text-xl uppercase tracking-wide text-accent">Never</p>
+          <ul className="space-y-2">{DONT.map((t) => <li key={t} className="flex gap-2"><span className="mt-0.5 font-bold text-accent">×</span>{t}</li>)}</ul>
         </div>
       </section>
 
@@ -169,7 +169,7 @@ export function RulesView() {
   const block = (title: string, items: string[], tone: string) => (
     <div className="card p-6">
       <p className={`mb-4 font-display text-xl uppercase tracking-wide ${tone}`}>{title}</p>
-      <ul className="space-y-2.5">{items.map((t) => <li key={t} className="flex gap-2.5 text-[15px]"><Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-magenta" />{t}</li>)}</ul>
+      <ul className="space-y-2.5">{items.map((t) => <li key={t} className="flex gap-2.5 text-[15px]"><Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-accent" />{t}</li>)}</ul>
     </div>
   );
   return (
@@ -190,7 +190,7 @@ export function RulesView() {
       <div className="grid gap-4 md:grid-cols-2">
         {block('Time', RULES.time, 'text-ink')}
         {block('Conduct', RULES.conduct, 'text-ink')}
-        {block('Ladies', RULES.ladies, 'text-magenta')}
+        {block('Ladies', RULES.ladies, 'text-accent')}
         {block('Men', RULES.men, 'text-plum-700 dark:text-ink')}
       </div>
     </div>
@@ -202,7 +202,7 @@ export function RulesView() {
 export function DepartmentView({ dept }: { dept: DepartmentGuide }) {
   const col = (title: string, items: string[]) => (
     <div className="card p-5">
-      <p className="eyebrow mb-3">{title}</p>
+      <p className="overline mb-3">{title}</p>
       <ul className="space-y-2">{items.map((t) => <li key={t} className="flex gap-2 text-[14.5px] leading-snug"><span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-magenta" />{t}</li>)}</ul>
     </div>
   );
@@ -212,7 +212,7 @@ export function DepartmentView({ dept }: { dept: DepartmentGuide }) {
         <p className="text-lg leading-relaxed">{dept.mission}</p>
         <ul className="mt-5 grid gap-2 sm:grid-cols-2">
           {dept.responsibilities.map((r) => (
-            <li key={r} className="flex gap-2.5 rounded-xl bg-plum-100/70 p-3 text-[14.5px] font-medium"><Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-magenta" />{r}</li>
+            <li key={r} className="flex gap-2.5 rounded-xl bg-plum-100/70 p-3 text-[14.5px] font-medium"><Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-accent" />{r}</li>
           ))}
         </ul>
       </div>
@@ -231,7 +231,7 @@ export function DepartmentView({ dept }: { dept: DepartmentGuide }) {
         <span className="chip shrink-0 bg-magenta text-white">The standard</span>
         <p className="font-semibold">{dept.standard}</p>
       </div>
-      {dept.needs && <p className="rounded-2xl bg-gold/15 p-4 text-sm font-semibold text-warn">{dept.needs}</p>}
+      {dept.needs && <p className="rounded-2xl bg-gold/15 p-4 text-sm font-semibold text-warn-ink">{dept.needs}</p>}
     </div>
   );
 }
@@ -247,12 +247,12 @@ export function MasterPlan({ months, currentFollowers }: { months: PlanMonth[]; 
       <div className="card p-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="eyebrow mb-1">Goal</p>
+            <p className="overline mb-1">Goal</p>
             <p className="font-display text-5xl uppercase leading-none">10,000 by July 2027</p>
             <p className="mt-2 text-sm text-muted">Starting point: 774 followers on 1 Nov 2026. That means passing CCI Ikorodu (6,778) and Harvesters Ikorodu (9,486).</p>
           </div>
           <div className="text-right">
-            <p className="font-display text-4xl tabular-nums text-magenta">{latest.toLocaleString('en-US')}</p>
+            <p className="font-display text-4xl tabular-nums text-accent">{latest.toLocaleString('en-US')}</p>
             <p className="text-xs uppercase tracking-wider text-muted">latest count</p>
           </div>
         </div>
@@ -264,11 +264,11 @@ export function MasterPlan({ months, currentFollowers }: { months: PlanMonth[]; 
             const isNow = m.month === now;
             return (
               <div key={m.id} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
-                <span className={`text-[10px] font-bold tabular-nums sm:text-xs ${isNow ? 'text-magenta' : 'text-muted'}`}>{(m.follower_target / 1000).toFixed(m.follower_target < 10000 ? 1 : 0)}k</span>
+                <span className={`text-[11px] font-bold tabular-nums sm:text-xs ${isNow ? 'text-accent' : 'text-muted'}`}>{(m.follower_target / 1000).toFixed(m.follower_target < 10000 ? 1 : 0)}k</span>
                 <div className={`relative w-full rounded-t-lg ${isNow ? 'bg-magenta' : 'bg-plum-100'}`} style={{ height: `${h}%` }}>
                   {actual > 0 && <div className="absolute inset-x-1 bottom-0 rounded-t-md bg-gold" style={{ height: `${(actual / h) * 100}%` }} title={`Actual ${m.followers_actual}`} />}
                 </div>
-                <span className={`text-[10px] font-semibold uppercase sm:text-xs ${isNow ? 'text-magenta' : 'text-muted'}`}>{label(m.month, 'month').slice(0, 3)}</span>
+                <span className={`text-[11px] font-semibold uppercase sm:text-xs ${isNow ? 'text-accent' : 'text-muted'}`}>{label(m.month, 'month').slice(0, 3)}</span>
               </div>
             );
           })}
@@ -284,19 +284,19 @@ export function MasterPlan({ months, currentFollowers }: { months: PlanMonth[]; 
           return (
             <div key={m.id} className="relative flex gap-4">
               <div className={`z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-lg sm:h-12 sm:w-12 ${isNow ? 'bg-magenta text-white' : past ? 'bg-plum-700 text-white' : 'border border-line bg-card text-muted'}`}>{i + 1}</div>
-              <Link href={`/content?week=${firstWeek}`} className={`card group min-w-0 flex-1 p-5 transition hover:-translate-y-0.5 hover:border-magenta/40 ${isNow ? 'ring-2 ring-magenta' : ''}`}>
+              <Link href={`/content?week=${firstWeek}`} className={`card group min-w-0 flex-1 p-5 transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-magenta/40 ${isNow ? 'ring-2 ring-magenta' : ''}`}>
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted">{label(m.month, 'month')}</p>
                   {isNow && <span className="chip bg-magenta text-white">Now</span>}
                   <span className="chip ml-auto bg-plum-100 text-plum-700 dark:text-ink">Target {m.follower_target.toLocaleString('en-US')}</span>
                 </div>
-                <p className="mt-1.5 font-display text-2xl uppercase tracking-wide">{m.theme}</p>
+                <h2 className="mt-1.5 card-title">{m.theme}</h2>
                 <div className="mt-3 grid gap-3 text-[14.5px] md:grid-cols-2">
                   <p><span className="font-bold">Big moment: </span>{m.big_moment}</p>
                   <p><span className="font-bold">Hero content: </span>{m.hero_content}</p>
                 </div>
                 {m.highlight && <p className="mt-2 text-sm text-muted">Highlight to add: {m.highlight}</p>}
-                <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-magenta">See this month's content board <Icon name="arrow" className="h-4 w-4 transition group-hover:translate-x-1" /></span>
+                <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-accent">See this month's content board <Icon name="arrow" className="h-4 w-4 transition group-hover:translate-x-1" /></span>
               </Link>
             </div>
           );
@@ -315,7 +315,7 @@ export function WeeklyRhythm() {
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
       {RHYTHM.map((r) => (
         <div key={r.dow} className="card flex flex-col gap-2 p-4">
-          <p className="font-display text-2xl uppercase text-muted">{DOW[r.dow]}</p>
+          <h2 className="card-title text-muted">{DOW[r.dow]}</h2>
           <span className={`chip w-fit ${PILLAR_STYLE[r.pillar]}`}>{r.pillar}</span>
           <p className="font-bold leading-tight">{r.series}</p>
           <p className="text-xs text-muted">{r.format}</p>

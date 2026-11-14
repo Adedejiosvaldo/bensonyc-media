@@ -7,6 +7,11 @@ colors:
   media-quiet: "#544654"
   media-rule: "rgb(30 8 32 / .24)"
   media-accent: "#D6197A"
+  media-paper-deep: "#F8E6C8"
+  app-accent-text: "rgb(199 20 112)"
+  app-danger: "rgb(185 28 28)"
+  app-good-ink: "rgb(14 104 64)"
+  app-warn-ink: "rgb(133 77 0)"
   church-night: "#1E0820"
   church-plum: "#2B0A2C"
   church-white: "#FFFDF8"
@@ -32,9 +37,29 @@ typography:
     lineHeight: 1.5
   label:
     fontFamily: "Plus Jakarta Sans, system-ui, sans-serif"
-    fontSize: "10px"
+    fontSize: "11px"
     fontWeight: 800
-    letterSpacing: "0.09em"
+    letterSpacing: "0.1em"
+  app-caption:
+    fontFamily: "Plus Jakarta Sans, system-ui, sans-serif"
+    fontSize: "11px"
+    fontWeight: 700
+    letterSpacing: "0.05em"
+  app-small:
+    fontFamily: "Plus Jakarta Sans, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 600
+    lineHeight: 1.4
+  app-input:
+    fontFamily: "Plus Jakarta Sans, system-ui, sans-serif"
+    fontSize: "16px"
+    fontWeight: 400
+    lineHeight: 1.4
+  app-lead:
+    fontFamily: "Plus Jakarta Sans, system-ui, sans-serif"
+    fontSize: "16px"
+    fontWeight: 400
+    lineHeight: 1.6
 rounded:
   control: "0px"
 spacing:
@@ -105,11 +130,17 @@ The media site is ink on a warm production sheet; the church site uses a deep pl
 - **Media display** (400, responsive to 6rem, line height 0.92): Call-sheet identity and section titles.
 - **Church display** (800, responsive to 6rem, line height 0.96): Welcome and visitor section headings.
 - **Body** (400, 15px, 1.5 line height): Supporting information, role descriptions, and visitor guidance.
-- **Label** (800, 10px, 0.09em tracking): Actual production fields and wayfinding fields such as CALL, WORK, WHEN, and WHERE.
+- **Label** (800, 11px, 0.1em tracking): Actual production fields and wayfinding fields such as CALL, HOME BASE, WHEN, and WHERE. 11px is the floor; nothing interactive is set this small.
+
+### Member workspace scale
+The signed-in app uses the same two families with a compact scale: Anton for page titles (36–60px) and card titles (20–30px); 16px lead text; 15px body; 14px small text and navigation; 11px captions and chips (bold, tracked). Form fields render at 16px on phones (15px from `sm`) so iOS never zooms the page.
+
+### Text colour roles (workspace)
+Magenta is a fill. Text uses roles that keep 4.5:1 in light and dark themes: `ink`, `muted`, `accent` (magenta tuned for reading, brighter in dark mode), `danger` (errors and losses only — never brand), `good-ink`, `warn-ink`. Errors always carry `role="alert"` and the `alert-danger` style.
 
 ## Layout
 
-The media site uses a full-width call sheet: masthead, headline, call details, run-of-show, department register, and weekly series. The departments are ruled rows, not repeated feature cards. On mobile, the call details and run-of-show reflow into a readable single-column register.
+The media site uses a full-width call sheet: masthead, headline with the join action directly under it, call details (Sunday call, home base, training), run-of-show, a department register table (department / brief / Sunday call / join), and weekly series. Everything stays on paper; the register sits on a deeper paper tone between heavy rules rather than a dark band. Every section shares one gutter (`--gutter`). On mobile, the call details and run-of-show reflow into a readable single-column register.
 
 The church site starts with a welcome threshold and a WHEN / WHERE / directions route, then moves into a numbered first-visit sequence, future church themes, and real Instagram posts when available. On mobile, route details stack vertically and section navigation remains tappable without horizontal page overflow.
 
@@ -131,7 +162,7 @@ Both systems use square-edged production and wayfinding surfaces. Buttons remain
 - **Secondary links:** Underlined or ruled text links with visible keyboard focus; cross-site links name the destination.
 
 ### Navigation
-- The media masthead groups the media-unit identity and member sign-in, with a separate church-site link.
+- The media masthead groups the media-unit identity, section anchors and member sign-in. It does not link to the church site.
 - The church masthead prioritizes Sunday, first visit, stories, and a separate media-unit link.
 - Mobile navigation may wrap or scroll within its own strip; the document itself must not horizontally overflow.
 

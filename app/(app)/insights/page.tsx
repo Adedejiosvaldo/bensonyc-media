@@ -79,20 +79,20 @@ export default async function InsightsPage({ searchParams }: { searchParams: { n
 
       {accounts.length === 0 ? (
         <div className="card p-10 text-center">
-          <p className="font-display text-3xl uppercase">No numbers yet</p>
-          <p className="mt-2 text-muted">Connect Instagram or TikTok on the <Link href="/social" className="font-bold text-magenta">Post</Link> page, then tap Refresh.</p>
+          <p className="card-title text-xl">No numbers yet</p>
+          <p className="mt-2 text-muted">Connect Instagram or TikTok on the <Link href="/social" className="link">Post</Link> page, then tap Refresh.</p>
         </div>
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {accounts.map((a) => (
               <div key={a.platform} className="card p-5">
-                <p className="eyebrow">{PLATFORM_NAME[a.platform]} followers</p>
+                <p className="overline">{PLATFORM_NAME[a.platform]} followers</p>
                 <p className="mt-1 font-display text-5xl tabular-nums">{n(a.latest?.followers)}</p>
                 <p className="mt-2 text-sm">
                   {[['7 days', a.week], ['30 days', a.month]].map(([l, v]) => (
                     <span key={l as string} className="mr-4">
-                      <span className={`font-bold ${v == null ? 'text-muted' : (v as number) >= 0 ? 'text-good' : 'text-magenta'}`}>{v == null ? '–' : `${(v as number) >= 0 ? '+' : ''}${(v as number).toLocaleString('en-US')}`}</span>{' '}
+                      <span className={`font-bold ${v == null ? 'text-muted' : (v as number) >= 0 ? 'text-good-ink' : 'text-danger'}`}>{v == null ? '–' : `${(v as number) >= 0 ? '+' : ''}${(v as number).toLocaleString('en-US')}`}</span>{' '}
                       <span className="text-muted">{l}</span>
                     </span>
                   ))}
@@ -128,13 +128,14 @@ export default async function InsightsPage({ searchParams }: { searchParams: { n
 
       <section className="card p-6">
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <p className="mr-auto font-display text-2xl uppercase">Posts</p>
+          <h2 className="mr-auto section-title">Posts</h2>
           {[null, ...PLATFORMS].map((p) => (
-            <Link key={p ?? 'all'} href={href({ p })} className={`chip ${platform === p ? 'bg-plum-700 text-white' : 'bg-plum-100 text-ink'}`}>{p ? PLATFORM_NAME[p] : 'All'}</Link>
+            <Link key={p ?? 'all'} href={href({ p })} aria-current={platform === p ? 'true' : undefined} className={`chip min-h-9 px-3 ${platform === p ? 'bg-plum-700 text-white' : 'bg-plum-100 text-ink hover:bg-plum-100/70'}`}>{p ? PLATFORM_NAME[p] : 'All'}</Link>
           ))}
-          <span className="mx-1 h-4 w-px bg-line" />
+          <span className="mx-1 h-4 w-px bg-line" aria-hidden="true" />
+          <span className="text-xs font-semibold text-muted">Sort</span>
           {(Object.keys(SORTS) as (keyof typeof SORTS)[]).map((s) => (
-            <Link key={s} href={href({ sort: s })} className={`chip ${sort === s ? 'bg-magenta text-white' : 'bg-plum-100 text-ink'}`}>{SORTS[s]}</Link>
+            <Link key={s} href={href({ sort: s })} aria-current={sort === s ? 'true' : undefined} className={`chip min-h-9 px-3 ${sort === s ? 'bg-plum-700 text-white' : 'bg-plum-100 text-ink hover:bg-plum-100/70'}`}>{SORTS[s]}</Link>
           ))}
         </div>
         {list.length === 0 ? (
@@ -155,7 +156,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: { n
                     <p className="line-clamp-1 text-sm font-semibold">{m.caption || <span className="text-muted">No caption</span>}</p>
                     <p className="text-xs text-muted">
                       {PLATFORM_NAME[m.platform]}{m.media_type ? ` · ${m.media_type.toLowerCase().replace('_', ' ')}` : ''}{m.posted_at ? ` · ${label(m.posted_at.slice(0, 10))}` : ''}
-                      {m.permalink && <> · <a href={m.permalink} target="_blank" rel="noreferrer" className="font-bold text-magenta">Open</a></>}
+                      {m.permalink && <> · <a href={m.permalink} target="_blank" rel="noreferrer" className="font-bold text-accent">Open</a></>}
                     </p>
                     <p className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs tabular-nums">
                       <span><b>{n(m.views)}</b> views</span>

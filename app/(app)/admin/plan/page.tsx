@@ -14,13 +14,13 @@ export default async function EditPlan() {
   const { data: months } = await supabase.from('plan_months').select('*').order('month').returns<PlanMonth[]>();
   return (
     <div>
-      <Link href="/plan" className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-muted hover:text-magenta"><Icon name="back" className="h-4 w-4" /> 9-month plan</Link>
+      <Link href="/plan" className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-muted hover:text-accent"><Icon name="back" className="h-4 w-4" /> 9-month plan</Link>
       <PageHeader eyebrow="Admin" title="Edit the plan">Changes flow into every weekly board you generate after saving. Record the real follower count at each month end.</PageHeader>
       <div className="space-y-4">
         {(months ?? []).map((m) => (
           <form key={m.id} action={updatePlanMonth} className="card grid gap-4 p-5 md:grid-cols-2">
             <input type="hidden" name="id" value={m.id} />
-            <p className="font-display text-2xl uppercase md:col-span-2">{label(m.month, 'month')}</p>
+            <h2 className="card-title md:col-span-2">{label(m.month, 'month')}</h2>
             <div><label className="label" htmlFor={`theme-${m.id}`}>Theme</label><input id={`theme-${m.id}`} name="theme" defaultValue={m.theme} className="input" /></div>
             <div><label className="label" htmlFor={`moment-${m.id}`}>Big moment</label><input id={`moment-${m.id}`} name="big_moment" defaultValue={m.big_moment} className="input" /></div>
             <div className="md:col-span-2"><label className="label" htmlFor={`hero-${m.id}`}>Hero content</label><textarea id={`hero-${m.id}`} name="hero_content" defaultValue={m.hero_content} rows={2} className="input" /></div>

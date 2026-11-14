@@ -20,12 +20,12 @@ export default async function Departments() {
           const team = (members ?? []).filter((m) => m.department_id === d.id);
           const head = team.find((m) => m.role === 'head');
           return (
-            <Link key={d.id} href={`/departments/${d.id}`} className={`card group flex flex-col p-6 transition hover:-translate-y-0.5 hover:border-magenta/40 ${d.focus ? 'md:last:col-span-2' : ''}`}>
+            <Link key={d.id} href={`/departments/${d.id}`} className={`card group flex flex-col p-6 transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-magenta/40 ${d.focus ? 'md:last:col-span-2' : ''}`}>
               <div className="flex items-start justify-between gap-3">
                 <span className="font-display text-5xl leading-none text-plum-100 dark:text-plum-700">0{i + 1}</span>
                 {d.focus && <span className="chip bg-gold text-plum-950">Growth focus</span>}
               </div>
-              <p className="mt-3 font-display text-3xl uppercase">{d.name}</p>
+              <h2 className="mt-3 card-title text-xl">{d.name}</h2>
               <p className="mt-1 text-muted">{d.tagline}</p>
               <div className="mt-5 flex flex-wrap gap-1.5">
                 {team.length === 0 && <span className="text-sm text-muted">No members listed yet</span>}
@@ -35,7 +35,7 @@ export default async function Departments() {
                   </span>
                 ))}
               </div>
-              <span className="mt-5 inline-flex items-center gap-1 text-sm font-bold text-magenta">Responsibilities <Icon name="arrow" className="h-4 w-4 transition group-hover:translate-x-1" /></span>
+              <span className="mt-5 inline-flex items-center gap-1 text-sm font-bold text-accent">Responsibilities <Icon name="arrow" className="h-4 w-4 transition group-hover:translate-x-1" /></span>
               {!head && team.length > 0 && <span className="sr-only">No head assigned</span>}
             </Link>
           );

@@ -7,6 +7,7 @@ import { DEPARTMENTS } from '@/content/departments';
 import { SERIES } from '@/content/brand';
 import { LESSONS } from '@/content/lessons';
 import { getSession } from '@/lib/auth';
+import { callTime, lessonsMinutes, sundayCall } from '@/lib/call';
 
 export const metadata: Metadata = {
   title: { absolute: 'Benson YC Media · The crew behind Sunday' },
@@ -35,24 +36,22 @@ const RUN_OF_SHOW = [
 export default async function MediaLanding() {
   const { member } = await getSession();
   const isMember = Boolean(member);
-  const joinHref = isMember ? '/home' : '/join';
   const signInHref = isMember ? '/home' : '/login';
-  const churchHref = process.env.CHURCH_HOST ? `https://${process.env.CHURCH_HOST}` : '/church';
-  const lessonsMinutes = LESSONS.reduce((total, lesson) => total + lesson.minutes, 0);
+  const { call, grace } = sundayCall();
+  const joinHref = (department?: string) => (isMember ? (department ? `/departments/${department}` : '/home') : department ? `/join?department=${department}` : '/join');
 
   return (
     <div className="media-site">
       <a href="#main" className="media-skip">Skip to content</a>
 
       <header className="media-header">
-        <div className="media-header__affiliation">
-          <span>MFM BENSON YOUTH CHURCH <span aria-hidden="true">/</span> MEDIA UNIT</span>
-          <a href={churchHref}>Church website <Icon name="arrow" className="media-arrow" /></a>
-        </div>
-        <nav className="media-nav" aria-label="Media unit navigation">
-          <Link href="/" className="media-wordmark" aria-label="Benson YC Media home">
+        <nav className="media-nav" aria-label="Media unit">
+          <Link href="/" className="media-wordmark">
             <Logo size={38} />
-            <span><strong>Benson YC</strong><small>Media department</small></span>
+            <span>
+              <strong>Benson YC Media</strong>
+              <small>MFM Benson Youth Church</small>
+            </span>
           </Link>
           <div className="media-nav__links">
             <a href="#run">The run</a>
@@ -64,46 +63,52 @@ export default async function MediaLanding() {
       </header>
 
       <main id="main">
-        <section className="media-call-sheet" aria-labelledby="media-title">
-          <div className="media-call-sheet__folio">
-            <span>CREW CALL / MEDIA UNIT</span>
-            <span>MFM BENSON YOUTH CHURCH</span>
-            <span>{String(DEPARTMENTS.length).padStart(2, '0')} DEPARTMENTS</span>
+        <section className="media-call-sheet media-gutter" aria-labelledby="media-title">
+          <div className="media-call-sheet__folio" aria-hidden="true">
+            <span>Crew call · Media unit</span>
+            <span>{String(DEPARTMENTS.length).padStart(2, '0')} departments</span>
           </div>
 
           <div className="media-call-sheet__title">
             <h1 id="media-title">The crew behind Sunday.</h1>
             <p>We prepare the room, capture what matters, and carry the message into the week.</p>
+            <div className="media-call-sheet__actions">
+              <Link href={joinHref()} className="media-action media-action--primary">
+                {isMember ? 'Go to your workspace' : 'Join the media unit'}
+                <span className="media-action__dot" aria-hidden="true"><Icon name="arrow" className="media-arrow" /></span>
+              </Link>
+              {!isMember && <Link href="/login" className="media-action media-action--quiet">Already on the team? Sign in</Link>}
+            </div>
           </div>
 
-          <div className="media-call-sheet__details" aria-label="Media unit call sheet">
+          <dl className="media-call-sheet__details">
             <div className="media-detail">
-              <span>EARLY CREW CALL</span>
-              <strong>7:30am</strong>
-              <small>Projection · Photography · Content</small>
-            </div>
-            <div className="media-detail">
-              <span>WORK</span>
-              <strong>Prepare · Capture · Share</strong>
+              <dt>Sunday call</dt>
+              <dd>
+                <strong>{call ?? 'See the roster'}</strong>
+                {grace && <small>Grace till {grace}</small>}
+              </dd>
             </div>
             <div className="media-detail">
-              <span>HOME BASE</span>
-              <strong>MFM Benson Youth Church</strong>
-              <small>{CHURCH.area}</small>
+              <dt>Home base</dt>
+              <dd>
+                <strong>MFM Benson Youth Church</strong>
+                <small>{CHURCH.area}</small>
+              </dd>
             </div>
-            <div className="media-call-sheet__actions">
-              <Link href={joinHref} className="media-action media-action--primary">
-                {isMember ? 'Go to your workspace' : 'Join the media unit'}
-                <Icon name="arrow" className="media-arrow" />
-              </Link>
-              <Link href={signInHref} className="media-action media-action--quiet">{isMember ? 'Open member home' : 'Already on the team? Sign in'}</Link>
+            <div className="media-detail">
+              <dt>Training</dt>
+              <dd>
+                <strong>{LESSONS.length} short lessons</strong>
+                <small>About {lessonsMinutes} minutes, at your pace</small>
+              </dd>
             </div>
-          </div>
+          </dl>
 
           <div className="media-run" id="run">
             <div className="media-run__heading">
               <h2>Sunday, from first check to final post</h2>
-              <span>RUN OF SHOW</span>
+              <span aria-hidden="true">Run of show</span>
             </div>
             <ol className="media-run__steps">
               {RUN_OF_SHOW.map((step) => (
@@ -117,52 +122,79 @@ export default async function MediaLanding() {
           </div>
         </section>
 
-        <section className="media-departments" id="departments" aria-labelledby="departments-title">
+        <section className="media-departments media-gutter" id="departments" aria-labelledby="departments-title">
           <div className="media-section-heading">
             <h2 id="departments-title">Find your department.</h2>
-            <p>Different skills. One crew. Start where you’re curious; learn the rest with the team.</p>
+            <p>Different skills. One crew. Start where you’re curious; the team teaches you the rest. Pick a crew here and it’s already chosen when you sign up.</p>
           </div>
-          <div className="media-department-list">
-            {DEPARTMENTS.map((department) => (
-              <article className="media-department" key={department.id}>
-                <h3>{department.name}</h3>
-                <p>{department.tagline}</p>
-                <Link href={isMember ? `/departments/${department.id}` : '/join'} aria-label={`${isMember ? 'View' : 'Join'} ${department.name}`}>
-                  <span>{isMember ? 'View department' : 'Join this crew'}</span>
-                  <Icon name="arrow" className="media-arrow" />
-                </Link>
-              </article>
-            ))}
-          </div>
-          <p className="media-onboarding-note">New to the unit? {LESSONS.length} short lessons take about {lessonsMinutes} minutes to complete.</p>
+          <table className="media-crew">
+            <caption className="sr-only">Media departments, what each one does, and when they’re called on Sunday</caption>
+            <thead>
+              <tr>
+                <th scope="col">Department</th>
+                <th scope="col">The brief</th>
+                <th scope="col">Sunday call</th>
+                <th scope="col"><span className="sr-only">Action</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {DEPARTMENTS.map((department, index) => {
+                const time = callTime(department.before);
+                return (
+                  <tr key={department.id}>
+                    <th scope="row">
+                      <span className="media-crew__index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                      {department.name}
+                    </th>
+                    <td className="media-crew__brief">
+                      {department.tagline}
+                      <span>{department.mission}</span>
+                    </td>
+                    <td className="media-crew__call">
+                      <span className="media-crew__label" aria-hidden="true">Call</span>
+                      {time ?? <span className="media-crew__offsite">Through the week</span>}
+                    </td>
+                    <td className="media-crew__action">
+                      <Link href={joinHref(department.id)}>
+                        {isMember ? 'View department' : 'Join this crew'}
+                        <span className="sr-only">: {department.name}</span>
+                        <Icon name="arrow" className="media-arrow" />
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </section>
 
-        <section className="media-week" id="series" aria-labelledby="series-title">
+        <section className="media-week media-gutter" id="series" aria-labelledby="series-title">
           <div className="media-week__intro">
             <h2 id="series-title">The week has its own rhythm.</h2>
             <p>Our recurring series give the message a life beyond Sunday. Every post is made by a real department, for the people we serve.</p>
           </div>
-          <ul className="media-series-list">
-            {SERIES.map((series) => <li key={series}>{series}</li>)}
-          </ul>
-          <a className="media-instagram" href="https://www.instagram.com/mfmbensonyc/" target="_blank" rel="noreferrer">
-            See the work on Instagram <Icon name="arrow" className="media-arrow" />
-          </a>
+          <div className="media-week__list">
+            <ul className="media-series-list" aria-label="Recurring series">
+              {SERIES.map((series) => <li key={series}>{series}</li>)}
+            </ul>
+            <a className="media-instagram" href="https://www.instagram.com/mfmbensonyc/" target="_blank" rel="noreferrer">
+              See the work on Instagram<span className="sr-only"> (opens in a new tab)</span> <Icon name="arrow" className="media-arrow" />
+            </a>
+          </div>
         </section>
 
-        <section className="media-close">
-          <h2>Bring what you know.<br />Learn what you don’t.</h2>
-          <Link href={joinHref} className="media-action media-action--primary">
+        <section className="media-close media-gutter" aria-labelledby="close-title">
+          <h2 id="close-title">Bring what you know. Learn what you don’t.</h2>
+          <Link href={joinHref()} className="media-action media-action--primary">
             {isMember ? 'Open your workspace' : 'Join the media unit'}
-            <Icon name="arrow" className="media-arrow" />
+            <span className="media-action__dot" aria-hidden="true"><Icon name="arrow" className="media-arrow" /></span>
           </Link>
         </section>
       </main>
 
-      <footer className="media-footer">
+      <footer className="media-footer media-gutter">
         <Link href="/" className="media-footer__brand"><Logo size={30} /> Benson YC Media</Link>
-        <span>Part of MFM Benson Youth Church</span>
-        <a href={churchHref}>Go to the church website <Icon name="arrow" className="media-arrow" /></a>
+        <span>Part of MFM Benson Youth Church · {CHURCH.area}</span>
       </footer>
     </div>
   );

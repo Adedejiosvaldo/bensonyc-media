@@ -3,6 +3,7 @@ import { requireMember } from '@/lib/auth';
 import { LESSONS } from '@/content/lessons';
 import { departmentById } from '@/content/departments';
 import { Icon } from '@/components/Icon';
+import { EmptyState } from '@/components/EmptyState';
 import { Ring } from '@/components/Progress';
 import { StatusChip, PILLAR_STYLE } from '@/components/StatusChip';
 import { addDays, label, monthStart, parse, todayLagos, weekStart } from '@/lib/dates';
@@ -48,108 +49,133 @@ export default async function Home() {
   const dept = departmentById(member.department_id);
   const firstName = member.full_name.split(' ')[0];
 
+
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="eyebrow mb-2">{label(today, 'long')}</p>
-        <h1 className="font-display text-5xl uppercase leading-none sm:text-6xl">Hi, {firstName}</h1>
-        <p className="mt-2 text-muted">{dept ? `${dept.name} · ` : ''}<span className="capitalize">{member.role}</span></p>
-      </div>
+    <div className="space-y-8">
+      <header className="flex flex-col gap-4 border-b border-line pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="eyebrow mb-2">{label(today, 'long')}</p>
+          <h1 className="font-display text-5xl uppercase leading-none sm:text-6xl">Hi, {firstName}</h1>
+          <p className="mt-2 text-muted">{dept ? `${dept.name} · ` : ''}<span className="capitalize">{member.role}</span></p>
+        </div>
+        {/* This week at a glance: the two numbers the unit is measured on. */}
+        {month && (
+          <dl className="grid grid-cols-2 gap-6 sm:text-right">
+            <div>
+              <dt className="overline">Posted this week</dt>
+              <dd className="stat mt-1.5">{posted}<span className="text-2xl text-muted">/{total || '–'}</span></dd>
+            </div>
+            <div>
+              <dt className="overline">Follower target</dt>
+              <dd className="stat mt-1.5">{month.follower_target.toLocaleString('en-US')}</dd>
+            </div>
+          </dl>
+        )}
+      </header>
 
       {nextLesson && (
-        <Link href={`/onboarding/${nextLesson.slug}`} className="group relative flex flex-col gap-5 overflow-hidden rounded-[24px] bg-plum-700 p-6 text-white sm:flex-row sm:items-center">
-          <div className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 rounded-full bg-magenta/40 blur-3xl" />
-          <div className="relative rounded-full bg-white p-1"><Ring value={doneCount} max={LESSONS.length} size={76} /></div>
-          <div className="relative flex-1">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-gold">Finish onboarding</p>
-            <p className="mt-1 font-display text-3xl uppercase leading-tight">Next: {nextLesson.title}</p>
-            <p className="mt-1 text-sm text-white/70">{nextLesson.minutes} min · {nextLesson.summary}</p>
+        <Link href={`/onboarding/${nextLesson.slug}`} className="on-dark group relative flex flex-col gap-5 overflow-hidden rounded-[24px] bg-plum-900 p-6 text-white shadow-lift transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-raise sm:flex-row sm:items-center">
+          <div className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 rounded-full bg-magenta/35 blur-3xl" aria-hidden="true" />
+          <div className="relative w-fit rounded-full bg-white p-1"><Ring value={doneCount} max={LESSONS.length} size={72} /></div>
+          <div className="relative min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gold">Finish onboarding · {LESSONS.length - doneCount} to go</p>
+            <p className="mt-1.5 text-xl font-bold leading-snug">Next: {nextLesson.title}</p>
+            <p className="mt-1 text-sm text-white/75">{nextLesson.minutes} min · {nextLesson.summary}</p>
           </div>
-          <span className="btn-primary relative">Continue <Icon name="arrow" className="h-4 w-4" /></span>
+          <span className="btn-primary relative w-full sm:w-auto">Continue <Icon name="arrow" className="h-4 w-4" /></span>
         </Link>
       )}
       {!pledge && !nextLesson && (
-        <Link href="/rules" className="block rounded-2xl bg-magenta/10 p-5 font-semibold text-magenta">You have not signed the pledge yet. Sign it on the Rules page →</Link>
+        <Link href="/rules" className="flex items-center gap-4 rounded-2xl border border-magenta/25 bg-magenta/[0.07] p-5 transition-colors duration-150 hover:bg-magenta/10">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-magenta text-white"><Icon name="rules" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">Sign the pledge</span>
+            <span className="block text-sm text-muted">Lessons done. One last step before your first duty.</span>
+          </span>
+          <Icon name="arrow" className="h-4 w-4 shrink-0 text-accent" />
+        </Link>
       )}
 
       {swapSlots && swapSlots.length > 0 && (
-        <Link href={`/roster?week=${weekStart(swapSlots[0].service_date)}`} className="flex items-center gap-4 rounded-2xl bg-gold/15 p-5 ring-1 ring-gold/60">
+        <Link href={`/roster?week=${weekStart(swapSlots[0].service_date)}`} className="flex items-center gap-4 rounded-2xl border border-gold/50 bg-gold/15 p-5 transition-colors duration-150 hover:bg-gold/20">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold text-plum-950"><Icon name="swap" /></span>
           <div className="min-w-0 flex-1">
             <p className="font-bold">{swapSlots.length === 1 ? 'A teammate needs cover' : `${swapSlots.length} teammates need cover`}</p>
-            <p className="truncate text-sm text-muted">{swapSlots.map((s) => `${s.duty} · ${label(s.service_date)}`).join(' / ')}</p>
+            <p className="text-sm text-muted">{swapSlots.slice(0, 3).map((s) => `${s.duty} · ${label(s.service_date)}`).join(' / ')}{swapSlots.length > 3 ? ` and ${swapSlots.length - 3} more` : ''}</p>
           </div>
+          <span className="hidden text-sm font-bold text-warn-ink sm:inline">Take a duty</span>
           <Icon name="arrow" className="h-4 w-4 shrink-0" />
         </Link>
       )}
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-        <section className="card p-6">
-          <div className="mb-4 flex items-center justify-between">
+        <section className="card p-6" aria-labelledby="duty-title">
+          <div className="mb-4 flex items-start justify-between gap-3">
             <div>
-              <p className="eyebrow">Your duty</p>
-              <p className="font-display text-2xl uppercase">{label(upcomingSunday, 'long')}</p>
+              <p className="overline">Your duty</p>
+              <h2 id="duty-title" className="card-title mt-1">{label(upcomingSunday, 'long')}</h2>
             </div>
-            <Link href={`/roster?week=${upcomingSunday}`} className="text-sm font-bold text-magenta">Full roster →</Link>
+            <Link href={`/roster?week=${upcomingSunday}`} className="link min-h-9 shrink-0 text-sm">Full roster →</Link>
           </div>
           {mySlots && mySlots.length > 0 ? (
             <ul className="space-y-2">
               {mySlots.map((s) => (
-                <li key={s.id} className="flex items-center gap-3 rounded-2xl bg-plum-100/70 p-4">
+                <li key={s.id} className="card-row flex items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-magenta text-white"><Icon name="roster" className="h-5 w-5" /></span>
                   <div className="min-w-0">
                     <p className="font-bold">{s.duty}</p>
-                    <p className="text-sm text-muted">{s.service_label} · {label(s.service_date, 'long')} · be in by 7:30</p>
-                    {waitingCover.has(s.id) && <p className="mt-1 text-xs font-bold text-warn">Swap requested, waiting for cover</p>}
+                    <p className="text-sm text-muted">{s.service_label} · in by 7:30am</p>
+                    {waitingCover.has(s.id) && (
+                      <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-gold/25 px-2 py-0.5 text-[11px] font-bold text-warn-ink">
+                        <Icon name="swap" className="h-3 w-3" /> Swap requested, waiting for cover
+                      </p>
+                    )}
                   </div>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="rounded-2xl border border-dashed border-line p-5 text-muted">{week ? 'You are not on duty this Sunday. Come ready to support your team.' : 'The roster for this Sunday has not been generated yet.'}</p>
+            <EmptyState compact icon={week ? 'check' : 'calendar'} title={week ? 'Not on duty this Sunday' : 'Roster not out yet'}>
+              {week ? 'Come ready to support your team.' : 'Your unit lead publishes it on Monday.'}
+            </EmptyState>
           )}
         </section>
 
-        <section className="card p-6">
-          <p className="eyebrow">This month</p>
-          <p className="font-display text-3xl uppercase leading-tight">{month?.theme ?? 'No theme set'}</p>
-          {month && (
-            <>
-              <p className="mt-2 text-sm text-muted">Big moment: {month.big_moment}</p>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-plum-100/70 p-4">
-                  <p className="font-display text-3xl tabular-nums">{month.follower_target.toLocaleString('en-US')}</p>
-                  <p className="text-xs uppercase tracking-wider text-muted">follower target</p>
-                </div>
-                <div className="rounded-2xl bg-plum-100/70 p-4">
-                  <p className="font-display text-3xl tabular-nums">{posted}/{total || '–'}</p>
-                  <p className="text-xs uppercase tracking-wider text-muted">posted this week</p>
-                </div>
-              </div>
-            </>
+        <section className="card flex flex-col p-6" aria-labelledby="month-title">
+          <p className="overline">This month</p>
+          <h2 id="month-title" className="mt-1 text-2xl font-extrabold leading-tight tracking-[-0.015em]">{month?.theme ?? 'No theme set yet'}</h2>
+          {month ? (
+            <p className="mt-2 text-sm leading-relaxed text-muted"><span className="font-semibold text-ink">Big moment:</span> {month.big_moment}</p>
+          ) : (
+            <p className="mt-2 text-sm text-muted">The plan for this month hasn’t been filled in.</p>
           )}
-          <Link href="/plan" className="mt-4 inline-block text-sm font-bold text-magenta">See the 9-month plan →</Link>
+          <Link href="/plan" className="link mt-auto inline-flex min-h-9 items-center pt-4 text-sm">See the 9-month plan →</Link>
         </section>
       </div>
 
-      <section className="card p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <p className="font-display text-2xl uppercase">Content you own</p>
-          <Link href="/content" className="text-sm font-bold text-magenta">This week’s board →</Link>
+      <section className="card p-6" aria-labelledby="owned-title">
+        <div className="mb-2 flex items-start justify-between gap-3">
+          <div>
+            <p className="overline">Coming up</p>
+            <h2 id="owned-title" className="card-title mt-1">Content you own</h2>
+          </div>
+          <Link href="/content" className="link min-h-9 shrink-0 text-sm">This week’s board →</Link>
         </div>
         {myItems && myItems.length > 0 ? (
           <ul className="divide-y divide-line">
             {myItems.map((i) => (
-              <li key={i.id} className="flex flex-wrap items-center gap-3 py-3">
-                <span className="w-24 shrink-0 text-sm font-bold">{label(i.day, 'day')} {label(i.day)}</span>
-                <span className={`chip ${PILLAR_STYLE[i.pillar]}`}>{i.series}</span>
-                <span className="min-w-0 flex-1 font-semibold">{i.title}</span>
-                <StatusChip status={i.status} />
+              <li key={i.id} className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 py-3 sm:grid-cols-[6rem_auto_minmax(0,1fr)_auto]">
+                <span className="text-sm font-bold tabular-nums">{label(i.day, 'day')} {label(i.day)}</span>
+                <span className={`chip w-fit ${PILLAR_STYLE[i.pillar]} max-sm:col-start-2`}>{i.series}</span>
+                <span className="min-w-0 break-words font-semibold max-sm:col-span-2">{i.title}</span>
+                <span className="max-sm:col-span-2"><StatusChip status={i.status} /></span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-muted">Nothing assigned to you yet. Pick something from the weekly board.</p>
+          <EmptyState compact icon="content" title="Nothing assigned to you yet" action={<Link href="/content" className="btn-ghost">Open the weekly board</Link>}>
+            Pick something from this week’s board, or ask your unit head.
+          </EmptyState>
         )}
       </section>
     </div>
