@@ -25,7 +25,8 @@ export function igAuthUrl(redirectUri: string, state: string) {
       override_default_response_type: 'true',
       state,
     });
-    return `https://www.facebook.com/${FB_VERSION}/dialog/oauth?${q}`;
+    // Same shape as the Login URL Meta generates for the configuration (unversioned dialog).
+    return `https://www.facebook.com/dialog/oauth?${q}`;
   }
   const q = new URLSearchParams({
     client_id: process.env.INSTAGRAM_APP_ID!,
