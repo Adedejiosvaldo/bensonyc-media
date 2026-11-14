@@ -70,7 +70,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
       )}
 
       {lead && (
-        <form action={generateRoster} className="card flex flex-col gap-4 p-5 lg:flex-row lg:items-center">
+        <form action={generateRoster} className="card flex flex-col gap-4 p-5 xl:flex-row xl:items-center">
           <input type="hidden" name="week" value={sunday} />
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-magenta text-white"><Icon name="shuffle" /></span>
@@ -79,7 +79,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
               <p className="text-xs text-muted">Fair rotation: fewest duties in the last 8 weeks go first.</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-4 text-sm font-semibold lg:ml-auto">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-3 text-sm font-semibold xl:ml-auto">
             <label className="flex items-center gap-2"><input type="checkbox" name="special" className="h-4 w-4 accent-[rgb(var(--magenta))]" /> Special service (+ phone camera)</label>
             <label className="flex items-center gap-2"><input type="checkbox" name="midweek" className="h-4 w-4 accent-[rgb(var(--magenta))]" /> Midweek service on</label>
             <select name="midweek_day" defaultValue="3" className="select-sm" aria-label="Midweek service day">
@@ -127,7 +127,7 @@ export default async function RosterPage({ searchParams }: { searchParams: { wee
                   const options = [{ value: '', label: '— Needs someone —' }, ...(members ?? []).filter((m) => m.department_id === d.id && m.status !== 'inactive').map((m) => ({ value: m.id, label: m.full_name }))];
                   return (
                     <div key={d.id} className="card p-5">
-                      <p className="overline mb-3">{d.name}</p>
+                      <p className="kicker mb-3">{d.name}</p>
                       <ul className="space-y-3">
                         {rows.map((s) => {
                           const mine = s.member_id === member.id;

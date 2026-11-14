@@ -49,15 +49,15 @@ export default async function AvailabilityPage() {
         Block the days you can’t serve and the roster will skip you. Add your duties to your phone’s calendar so you never miss one.
       </PageHeader>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid items-start gap-4 lg:grid-cols-2">
         <section className="card p-6">
-          <p className="overline mb-1">Can’t make it?</p>
+          <p className="kicker mb-1">Can’t make it?</p>
           <h2 className="mb-5 card-title">Block out dates</h2>
           <BlockoutForm today={today} />
         </section>
 
         <section className="card p-6">
-          <p className="overline mb-1">Coming up</p>
+          <p className="kicker mb-1">Coming up</p>
           <h2 className="mb-4 card-title">Your blocked dates</h2>
           {mine && mine.length > 0 ? (
             <ul className="space-y-2">
@@ -109,14 +109,22 @@ export default async function AvailabilityPage() {
                 </form>
               </>
             ) : (
-              <p role="status" className="alert-danger mt-3">Your calendar link isn’t ready yet. Tell an admin so they can switch it on.</p>
+              <p role="status" className="mt-3 flex items-start gap-2 rounded-xl border border-gold/40 bg-gold/15 p-3 text-sm font-semibold text-warn-ink">
+                <Icon name="clock" className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  Calendar links aren’t switched on yet.
+                  <span className="mt-0.5 block font-normal">
+                    {member.role === 'admin' ? 'Run the latest Supabase migration (calendar_tokens) to turn them on for everyone.' : 'An admin needs to turn them on. Your duties still show on Home and the Roster.'}
+                  </span>
+                </span>
+              </p>
             )}
           </div>
         </div>
       </section>
 
       <section className="card p-6">
-        <p className="overline mb-1">Next 6 weeks</p>
+        <p className="kicker mb-1">Next 6 weeks</p>
         <h2 className="mb-4 card-title">Who’s away</h2>
         {(team ?? []).length === 0 ? (
           <p className="text-muted">Nobody has blocked out dates yet.</p>

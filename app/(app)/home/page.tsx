@@ -62,11 +62,11 @@ export default async function Home() {
         {month && (
           <dl className="grid grid-cols-2 gap-6 sm:text-right">
             <div>
-              <dt className="overline">Posted this week</dt>
-              <dd className="stat mt-1.5">{posted}<span className="text-2xl text-muted">/{total || '–'}</span></dd>
+              <dt className="kicker">Posted this week</dt>
+              <dd className="stat mt-1.5">{total ? <>{posted}<span className="text-2xl text-muted">/{total}</span></> : <span className="text-muted">—</span>}</dd>
             </div>
             <div>
-              <dt className="overline">Follower target</dt>
+              <dt className="kicker">Follower target</dt>
               <dd className="stat mt-1.5">{month.follower_target.toLocaleString('en-US')}</dd>
             </div>
           </dl>
@@ -76,7 +76,7 @@ export default async function Home() {
       {nextLesson && (
         <Link href={`/onboarding/${nextLesson.slug}`} className="on-dark group relative flex flex-col gap-5 overflow-hidden rounded-[24px] bg-plum-900 p-6 text-white shadow-lift transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-raise sm:flex-row sm:items-center">
           <div className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 rounded-full bg-magenta/35 blur-3xl" aria-hidden="true" />
-          <div className="relative w-fit rounded-full bg-white p-1"><Ring value={doneCount} max={LESSONS.length} size={72} /></div>
+          <div className="relative w-fit"><Ring value={doneCount} max={LESSONS.length} size={76} /></div>
           <div className="relative min-w-0 flex-1">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gold">Finish onboarding · {LESSONS.length - doneCount} to go</p>
             <p className="mt-1.5 text-xl font-bold leading-snug">Next: {nextLesson.title}</p>
@@ -112,7 +112,7 @@ export default async function Home() {
         <section className="card p-6" aria-labelledby="duty-title">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
-              <p className="overline">Your duty</p>
+              <p className="kicker">Your duty</p>
               <h2 id="duty-title" className="card-title mt-1">{label(upcomingSunday, 'long')}</h2>
             </div>
             <Link href={`/roster?week=${upcomingSunday}`} className="link min-h-9 shrink-0 text-sm">Full roster →</Link>
@@ -142,7 +142,7 @@ export default async function Home() {
         </section>
 
         <section className="card flex flex-col p-6" aria-labelledby="month-title">
-          <p className="overline">This month</p>
+          <p className="kicker">This month</p>
           <h2 id="month-title" className="mt-1 text-2xl font-extrabold leading-tight tracking-[-0.015em]">{month?.theme ?? 'No theme set yet'}</h2>
           {month ? (
             <p className="mt-2 text-sm leading-relaxed text-muted"><span className="font-semibold text-ink">Big moment:</span> {month.big_moment}</p>
@@ -156,7 +156,7 @@ export default async function Home() {
       <section className="card p-6" aria-labelledby="owned-title">
         <div className="mb-2 flex items-start justify-between gap-3">
           <div>
-            <p className="overline">Coming up</p>
+            <p className="kicker">Coming up</p>
             <h2 id="owned-title" className="card-title mt-1">Content you own</h2>
           </div>
           <Link href="/content" className="link min-h-9 shrink-0 text-sm">This week’s board →</Link>

@@ -4,6 +4,8 @@ const v = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
 
 const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './content/**/*.{ts,tsx}'],
+  // The app is always light: `dark:` variants only apply under a .dark class, which nothing sets.
+  darkMode: 'class',
   // Hover styles only apply on devices that can hover, so a tap never leaves a stuck hover state.
   future: { hoverOnlyWhenSupported: true },
   theme: {

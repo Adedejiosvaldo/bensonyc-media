@@ -87,7 +87,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: { n
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {accounts.map((a) => (
               <div key={a.platform} className="card p-5">
-                <p className="overline">{PLATFORM_NAME[a.platform]} followers</p>
+                <p className="kicker">{PLATFORM_NAME[a.platform]} followers</p>
                 <p className="mt-1 font-display text-5xl tabular-nums">{n(a.latest?.followers)}</p>
                 <p className="mt-2 text-sm">
                   {[['7 days', a.week], ['30 days', a.month]].map(([l, v]) => (
@@ -130,12 +130,12 @@ export default async function InsightsPage({ searchParams }: { searchParams: { n
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <h2 className="mr-auto section-title">Posts</h2>
           {[null, ...PLATFORMS].map((p) => (
-            <Link key={p ?? 'all'} href={href({ p })} aria-current={platform === p ? 'true' : undefined} className={`chip min-h-9 px-3 ${platform === p ? 'bg-plum-700 text-white' : 'bg-plum-100 text-ink hover:bg-plum-100/70'}`}>{p ? PLATFORM_NAME[p] : 'All'}</Link>
+            <Link key={p ?? 'all'} href={href({ p })} aria-current={platform === p ? 'true' : undefined} className={`chip min-h-9 px-3 ${platform === p ? 'bg-magenta text-white' : 'bg-plum-100 text-ink hover:bg-plum-100/70'}`}>{p ? PLATFORM_NAME[p] : 'All'}</Link>
           ))}
           <span className="mx-1 h-4 w-px bg-line" aria-hidden="true" />
           <span className="text-xs font-semibold text-muted">Sort</span>
           {(Object.keys(SORTS) as (keyof typeof SORTS)[]).map((s) => (
-            <Link key={s} href={href({ sort: s })} aria-current={sort === s ? 'true' : undefined} className={`chip min-h-9 px-3 ${sort === s ? 'bg-plum-700 text-white' : 'bg-plum-100 text-ink hover:bg-plum-100/70'}`}>{SORTS[s]}</Link>
+            <Link key={s} href={href({ sort: s })} aria-current={sort === s ? 'true' : undefined} className={`chip min-h-9 px-3 ${sort === s ? 'bg-magenta text-white' : 'bg-plum-100 text-ink hover:bg-plum-100/70'}`}>{SORTS[s]}</Link>
           ))}
         </div>
         {list.length === 0 ? (

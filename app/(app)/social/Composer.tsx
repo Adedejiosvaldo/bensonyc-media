@@ -168,7 +168,7 @@ export function Composer({ connected, items, tiktokMode, storage, admin }: { con
     return (
       <div className="space-y-5">
         <div>
-          <p className="overline mb-1">Last check</p>
+          <p className="kicker mb-1">Last check</p>
           <h2 ref={heading} tabIndex={-1} className="section-title text-2xl outline-none">Ready to post?</h2>
         </div>
         <div className="flex gap-4 rounded-2xl bg-plum-100/60 p-4">

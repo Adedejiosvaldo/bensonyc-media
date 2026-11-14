@@ -26,24 +26,6 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --plum-100: 52 22 52;
-    --surface: 20 10 22;
-    --card: 31 17 33;
-    --ink: 246 238 246;
-    --muted: 186 168 188;
-    --line: 60 38 62;
-    --good: 74 200 140;
-    --warn: 240 170 60;
-    --accent: 255 122 184;
-    --danger: 255 128 128;
-    --good-ink: 120 222 170;
-    --warn-ink: 250 196 104;
-    color-scheme: dark;
-  }
-}
-
 html { scroll-padding-top: 5rem; }
 html, body { background: rgb(var(--surface)); color: rgb(var(--ink)); }
 body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-tap-highlight-color: transparent; }
@@ -59,7 +41,7 @@ p { text-wrap: pretty; }
   .eyebrow { @apply text-[11px] font-bold uppercase tracking-[0.14em] text-accent; }
   /* Hierarchy: Anton is for page titles and big numbers only. Inside a page, sections and cards
      are titled in bold sans so one level never shouts as loud as the page itself. */
-  .overline { @apply text-[11px] font-bold uppercase tracking-[0.12em] text-muted; }
+  .kicker { @apply text-[11px] font-bold uppercase tracking-[0.12em] text-muted; }
   .section-title { @apply text-xl font-extrabold tracking-[-0.01em] text-ink; }
   .card-title { @apply text-lg font-bold leading-snug tracking-[-0.01em] text-ink; }
   .stat { @apply font-display text-4xl leading-none tabular-nums text-ink; }

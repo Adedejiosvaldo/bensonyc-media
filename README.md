@@ -84,11 +84,18 @@ Instagram and TikTok download each file from a public link, so the files need a 
 
 With R2 on a custom domain, you can verify that domain with TikTok for photo posts instead of the `/api/media/` prefix.
 
-**Instagram setup**
-1. developers.facebook.com → Create app → add the **Instagram** product → *API setup with Instagram login*.
-2. Add the unit's Instagram account under *Roles → Instagram testers* and accept the invite in Instagram (Settings → Website permissions → Apps and websites).
-3. Set the redirect URL to `https://YOUR-SITE/api/social/callback/instagram`.
-4. Copy the Instagram app ID and secret into `INSTAGRAM_APP_ID` and `INSTAGRAM_APP_SECRET` on Vercel.
+**Instagram setup (new Meta apps: Unified login)**
+
+Meta no longer offers "API setup with Instagram login" to new apps; they use **Unified login** (Facebook Login for Business). The app supports both, and switches to Unified login when `INSTAGRAM_CONFIG_ID` is set.
+1. developers.facebook.com → your app → **Use cases** → *Manage messaging & content on Instagram* → **Customise** → **API setup with Unified login**.
+2. Under *Configure your app*, create a configuration: login variation **General**, token **System-user access token**, expiration **Never**, asset **Instagram account**. Permissions must include `instagram_basic`, `instagram_content_publish` and `instagram_manage_insights` (for Insights).
+3. Register the redirect URL `https://YOUR-SITE/api/social/callback/instagram` on that configuration.
+4. Add the unit's Instagram account under *Roles → Instagram testers* and accept the invite in Instagram (Settings → Website permissions → Apps and websites).
+5. On Vercel set `INSTAGRAM_APP_ID` and `INSTAGRAM_APP_SECRET` to the **Meta app ID and secret** (App settings → Basic) and `INSTAGRAM_CONFIG_ID` to the configuration's ID. Redeploy.
+
+Development mode is enough while the app only posts to an account with a role on it; App Review is only needed for other people's accounts. Unified-login tokens don't expire, so there's nothing to refresh. They stop working if the app is removed from the business's connected apps, and then an admin connects again.
+
+*Older apps with Instagram login:* leave `INSTAGRAM_CONFIG_ID` unset, use the **Instagram** app ID and secret from *API setup with Instagram login*, and set the same redirect URL there.
 
 **TikTok setup**
 1. developers.tiktok.com → Create app → add **Login Kit** and **Content Posting API** (turn on Direct Post if you plan to apply for the audit).

@@ -49,14 +49,14 @@ export default async function AdminPage({ searchParams }: { searchParams: { dept
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
-        <Link href="/admin" aria-current={!searchParams.dept ? 'true' : undefined} className={`chip min-h-9 px-3 ${!searchParams.dept ? 'bg-plum-700 text-white' : 'bg-plum-100 text-ink'}`}>All</Link>
+        <Link href="/admin" aria-current={!searchParams.dept ? 'true' : undefined} className={`chip min-h-9 px-3 ${!searchParams.dept ? 'bg-magenta text-white' : 'bg-plum-100 text-ink hover:bg-plum-100/70'}`}>All</Link>
         {DEPARTMENTS.map((d) => (
-          <Link key={d.id} href={`/admin?dept=${d.id}`} aria-current={searchParams.dept === d.id ? 'true' : undefined} className={`chip min-h-9 px-3 ${searchParams.dept === d.id ? 'bg-plum-700 text-white' : 'bg-plum-100 text-ink'}`}>{d.name}</Link>
+          <Link key={d.id} href={`/admin?dept=${d.id}`} aria-current={searchParams.dept === d.id ? 'true' : undefined} className={`chip min-h-9 px-3 ${searchParams.dept === d.id ? 'bg-magenta text-white' : 'bg-plum-100 text-ink hover:bg-plum-100/70'}`}>{d.name}</Link>
         ))}
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="w-full min-w-[860px] text-left text-sm">
+        <table className="w-full min-w-[1080px] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-wider text-muted">
             <tr>
               <th className="px-4 py-3">Member</th>
@@ -83,7 +83,7 @@ export default async function AdminPage({ searchParams }: { searchParams: { dept
                   </td>
                   <td className="px-4 py-3">
                     {admin ? (
-                      <form action={updateMember} className="flex flex-wrap items-center gap-2">
+                      <form action={updateMember} className="flex items-center gap-2">
                         <input type="hidden" name="id" value={m.id} />
                         <select name="department_id" defaultValue={m.department_id ?? ''} className="select-sm" aria-label={`Department for ${m.full_name}`}>
                           <option value="">—</option>
