@@ -11,6 +11,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { DEPARTMENTS } from '@/content/departments';
 import { DO, DONT, SERIES } from '@/content/brand';
 import { AI_PLAYBOOK } from '@/content/ai-playbook';
+import { tidy, unquote } from './text';
 import { RHYTHM, buildWeek, monthForWeek } from '@/lib/plan';
 import { addDays, label, todayLagos, weekStart } from '@/lib/dates';
 import { getAccount } from '@/lib/social/accounts';
@@ -75,28 +76,28 @@ const planTool: Anthropic.Tool = {
         properties: {
           title: { type: 'string', description: 'A short phrase a member could repeat.' },
           idea: { type: 'string', description: 'One or two sentences: what the week is about and how the posts carry it.' },
-          why: { type: 'string', description: 'The evidence: last week’s numbers against the usual level, and any trend it builds on.' },
+          why: { type: 'string', description: 'One or two short sentences with the key numbers behind the theme. No more than 40 words.' },
         },
       },
       trends: {
         type: 'array',
-        description: '3 to 6 things working right now on Instagram and TikTok for church, youth and Christian creators (formats, sounds, series ideas, caption styles), with at least one from each platform when found.',
+        description: 'The 3 most useful things working right now on Instagram and TikTok for church, youth and Christian creators (formats, sounds, series ideas, caption styles), with at least one from each platform when found.',
         items: {
           type: 'object',
           additionalProperties: false,
           required: ['platform', 'what', 'how_we_use_it', 'url'],
           properties: {
             platform: { type: 'string', enum: ['instagram', 'tiktok'] },
-            what: { type: 'string', description: 'What the trend is, specifically.' },
-            how_we_use_it: { type: 'string', description: 'How YC could do it this week.' },
+            what: { type: 'string', description: 'What the trend is, in one sentence under 25 words.' },
+            how_we_use_it: { type: 'string', description: 'How YC could do it this week, in one sentence under 25 words.' },
             url: { type: 'string', description: 'An example link from your search results, or an empty string if none.' },
           },
         },
       },
-      summary: { type: 'string', description: 'Two or three plain sentences for the unit lead: what worked lately and the idea behind this week.' },
+      summary: { type: 'string', description: 'One or two plain sentences for the unit lead, under 45 words. Do not repeat numbers already in the theme.' },
       insights: {
         type: 'array',
-        description: 'Up to 5 findings from the numbers, each with the evidence.',
+        description: 'The 3 most important findings from the numbers. Each finding is one sentence; each evidence is one sentence with the numbers.',
         items: { type: 'object', additionalProperties: false, required: ['finding', 'evidence'], properties: { finding: str, evidence: str } },
       },
       suggestions: {
@@ -116,7 +117,7 @@ const planTool: Anthropic.Tool = {
             hook: { type: 'string', description: 'The first line or first 2 seconds: what is said or shown.' },
             caption: { type: 'string', description: 'Ready-to-edit caption draft with a single call to action and up to 4 hashtags.' },
             shot_notes: { type: 'string', description: 'What to film or design, in one or two sentences.' },
-            why: { type: 'string', description: 'One sentence linking this idea to the unit’s own numbers or a reference post.' },
+            why: { type: 'string', description: 'One short sentence (under 25 words) linking this idea to the unit’s own numbers or a reference post.' },
             references: {
               type: 'array',
               description: '0 to 3 reference posts. Only URLs from your search results or the peer posts.',
@@ -358,13 +359,13 @@ async function collect(run: RunRow) {
       pillar: PILLARS.includes(s.pillar) ? s.pillar : 'Community',
       format: s.format,
       department_id: DEPT_IDS.includes(s.department_id as (typeof DEPT_IDS)[number]) ? s.department_id : 'content',
-      title: s.title,
-      hook: s.hook,
-      caption: s.caption,
-      shot_notes: s.shot_notes,
-      why: s.why,
+      title: unquote(s.title),
+      hook: unquote(s.hook),
+      caption: tidy(s.caption),
+      shot_notes: tidy(s.shot_notes),
+      why: tidy(s.why),
       // Drop any link the model did not actually see, so nobody is sent to a made-up URL.
-      refs: (s.references ?? []).filter((r) => /^https?:\/\//.test(r.url) && urls.has(clean(r.url))).slice(0, 3),
+      refs: (s.references ?? []).filter((r) => /^https?:\/\//.test(r.url) && urls.has(clean(r.url))).slice(0, 3).map((r) => ({ ...r, note: tidy(r.note) })),
     }));
   if (!rows.length) return fail('The plan had no usable posts for this week. Try again.');
 
@@ -377,10 +378,10 @@ async function collect(run: RunRow) {
     .from('ai_runs')
     .update({
       status: 'done',
-      theme: plan.week_theme ?? null,
-      trends: (plan.trends ?? []).slice(0, 6).map((t) => ({ ...t, url: t.url && urls.has(clean(t.url)) ? t.url : '' })),
-      summary: plan.summary,
-      insights: (plan.insights ?? []).slice(0, 5),
+      theme: plan.week_theme ? { title: unquote(plan.week_theme.title), idea: tidy(plan.week_theme.idea), why: tidy(plan.week_theme.why) } : null,
+      trends: (plan.trends ?? []).slice(0, 3).map((t) => ({ platform: t.platform, what: tidy(t.what), how_we_use_it: tidy(t.how_we_use_it), url: t.url && urls.has(clean(t.url)) ? t.url : '' })),
+      summary: tidy(plan.summary),
+      insights: (plan.insights ?? []).slice(0, 3).map((i) => ({ finding: tidy(i.finding), evidence: tidy(i.evidence) })),
       usage,
       finished_at: new Date().toISOString(),
     })
@@ -416,4 +417,45 @@ export async function aiTick() {
   if (count) return { started: false };
   const id = await startRun(next, null);
   return { started: true, run: id };
+}
+
+export type AiSuggestion = {
+  id: string;
+  day: string;
+  series: string;
+  pillar: string;
+  format: string;
+  title: string;
+  hook: string;
+  caption: string;
+  shot_notes: string;
+  why: string;
+  refs: AiRef[];
+  status: 'new' | 'added' | 'dismissed';
+};
+export type AiRun = { id: string; status: 'queued' | 'done' | 'failed'; theme: AiTheme | null; trends: AiTrend[]; summary: string | null; insights: AiInsight[]; error: string | null; created_at: string };
+
+/** Latest run and its open suggestions for a week, after collecting the run if it just finished. */
+export async function loadAiWeek(sunday: string): Promise<{ run: AiRun | null; suggestions: AiSuggestion[] }> {
+  if (!aiConfigured()) return { run: null, suggestions: [] };
+  await collectRuns(sunday);
+  const db = createAdminClient();
+  const [{ data: runs }, { data: suggestions }] = await Promise.all([
+    db.from('ai_runs').select('id, status, theme, trends, summary, insights, error, created_at').eq('week_start', sunday).order('created_at', { ascending: false }).limit(1).returns<AiRun[]>(),
+    db.from('ai_suggestions').select('*').eq('week_start', sunday).neq('status', 'dismissed').order('day').returns<AiSuggestion[]>(),
+  ]);
+  return { run: runs?.[0] ?? null, suggestions: suggestions ?? [] };
+}
+
+/** Latest finished run, for the Insights page. */
+export async function latestAiRun(): Promise<(AiRun & { week_start: string }) | null> {
+  if (!aiConfigured()) return null;
+  const { data } = await createAdminClient()
+    .from('ai_runs')
+    .select('id, week_start, status, theme, trends, summary, insights, error, created_at')
+    .eq('status', 'done')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .returns<(AiRun & { week_start: string })[]>();
+  return data?.[0] ?? null;
 }
