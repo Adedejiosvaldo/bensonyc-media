@@ -131,7 +131,6 @@ export function AiPlanStrip({
           ) : (
             <span className="text-sm text-white/70">{suggestions.length ? 'All ideas are on the board.' : 'No ideas left for the days ahead.'}</span>
           )}
-          {!tooLate && ask('Ask again', 'btn border border-white/25 text-white hover:bg-white/10')}
         </div>
       </div>
       {upcoming.length > 0 && <p className="border-t border-white/10 px-5 py-2.5 text-xs text-white/65 sm:px-6">Each idea also sits on its day below, marked <b className="text-white/85">AI idea</b>. Add or dismiss them one by one there.</p>}

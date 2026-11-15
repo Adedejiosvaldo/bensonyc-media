@@ -13,15 +13,16 @@ import { DO, DONT, SERIES } from '@/content/brand';
 import { AI_PLAYBOOK } from '@/content/ai-playbook';
 import { tidy, unquote } from './text';
 import { RHYTHM, buildWeek, monthForWeek } from '@/lib/plan';
-import { addDays, label, todayLagos, weekStart } from '@/lib/dates';
+import { addDays, label, rangeLabel, todayLagos, weekStart } from '@/lib/dates';
 import { getAccount } from '@/lib/social/accounts';
 import { igPeerPosts, igUnified, type PeerPost } from '@/lib/social/instagram';
 import type { MediaStat } from '@/lib/social/types';
 import type { ContentItem, PlanMonth } from '@/lib/types';
 
-const MODEL = 'claude-opus-5-5';
+// Sonnet at medium effort with a few searches: about $0.20–0.35 a run on the batch API.
+const MODEL = 'claude-sonnet-5-5';
 const PLAN_TOOL = 'submit_week_plan';
-const MAX_CONTINUATIONS = 3;
+const MAX_CONTINUATIONS = 1;
 
 export const aiConfigured = () => !!process.env.ANTHROPIC_API_KEY;
 
@@ -253,14 +254,17 @@ function client() {
 export async function startRun(sunday: string, requestedBy: string | null) {
   if (!aiConfigured()) throw new Error('Add ANTHROPIC_API_KEY on Vercel to turn on AI suggestions.');
   const db = createAdminClient();
+  // One run per week: each run costs real money, so a second click shows the first run instead.
+  const { count } = await db.from('ai_runs').select('id', { count: 'exact', head: true }).eq('week_start', sunday).in('status', ['queued', 'done']);
+  if (count) throw new Error(`Ideas for ${rangeLabel(sunday)} are already in or on the way. Each week gets one set.`);
   const context = await gatherContext(sunday);
   const params: Anthropic.MessageCreateParamsNonStreaming = {
     model: MODEL,
     max_tokens: 32000,
     thinking: { type: 'adaptive' },
-    output_config: { effort: 'high' },
+    output_config: { effort: 'medium' },
     system: SYSTEM,
-    tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 10 }, planTool],
+    tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }, planTool],
     tool_choice: { type: 'auto' },
     messages: [
       {

@@ -51,7 +51,7 @@ export default async function AiSettingsPage() {
               </div>
             )}
           </dl>
-          <p className="mt-4 text-sm text-muted">Spend is on your Anthropic console. Each run is roughly $0.25–0.50.</p>
+          <p className="mt-4 text-sm text-muted">Spend is on your Anthropic console. Each run is roughly $0.20–0.35, one per week.</p>
         </section>
 
         <section className="card p-6">
