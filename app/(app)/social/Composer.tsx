@@ -35,14 +35,17 @@ function igCrop(w: number, h: number) {
  * Instagram's API only takes JPEG photos, so convert anything else in the browser. When Instagram is a
  * target, photos taller than 4:5 (a normal 9:16 phone photo) are trimmed top and bottom to 4:5, centred,
  * and very wide panoramas are trimmed to 1.91:1, so Instagram accepts them.
+ * TikTok rejects photos over 1080p (picture_size_check_failed), so when TikTok is a target the photo is
+ * shrunk to fit 1080 on its short side and 1920 on its long side. Instagram is happy at that size too.
  */
-async function toJpeg(file: File, fitInstagram: boolean): Promise<Blob> {
+async function toJpeg(file: File, fitInstagram: boolean, fitTiktok: boolean): Promise<Blob> {
   const bmp = await createImageBitmap(file);
   const crop = fitInstagram ? igCrop(bmp.width, bmp.height) : null;
-  if (file.type === 'image/jpeg' && !crop) return file;
   const src = crop ?? { sx: 0, sy: 0, sw: bmp.width, sh: bmp.height };
-  const max = 2160;
-  const scale = Math.min(1, max / Math.max(src.sw, src.sh));
+  const long = Math.max(src.sw, src.sh);
+  const short = Math.min(src.sw, src.sh);
+  const scale = fitTiktok ? Math.min(1, 1080 / short, 1920 / long) : Math.min(1, 2160 / long);
+  if (file.type === 'image/jpeg' && !crop && scale === 1) return file;
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(src.sw * scale);
   canvas.height = Math.round(src.sh * scale);
@@ -137,7 +140,7 @@ export function Composer({ connected, items, tiktokMode, storage, admin }: { con
       for (const [i, f] of files.entries()) {
         const label = `Uploading ${i + 1} of ${files.length}`;
         setBusy(`${label}…`);
-        const body = f.type === 'image' ? await toJpeg(f.file, platforms.includes('instagram')) : f.file;
+        const body = f.type === 'image' ? await toJpeg(f.file, platforms.includes('instagram'), platforms.includes('tiktok')) : f.file;
         const mime = f.type === 'image' ? 'image/jpeg' : f.file.type || 'video/mp4';
         const slot = await prepareUpload({ name: f.file.name, type: mime, size: body.size });
         if (slot.error || !slot.path || !slot.url) throw new UploadError('The upload couldn’t start. Try again in a minute.', slot.error ?? 'prepareUpload returned no path.');
