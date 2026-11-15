@@ -176,7 +176,7 @@ export function Composer({ connected, items, tiktokMode, storage, admin }: { con
         <h2 ref={heading} tabIndex={-1} className="section-title text-2xl outline-none">Sent</h2>
         <p className="max-w-sm text-muted">
           {sentTo.map((p) => NAME[p]).join(' and ')} {sentTo.length > 1 ? 'are' : 'is'} processing it now. Watch its status under Recent posts; a View link appears once it’s live.
-          {sentTo.includes('tiktok') && tiktokMode === 'inbox' ? ' TikTok lands in drafts: open TikTok on the unit phone to publish it.' : ''}
+          {sentTo.includes('tiktok') && tiktokMode === 'inbox' ? ' TikTok sends it to the app’s inbox, not the Drafts folder: on the unit phone open TikTok → Inbox and tap the notification to finish and post it.' : ''}
         </p>
         <div className="flex flex-wrap justify-center gap-2">
           <a href="#recent" className="btn-ghost">See Recent posts</a>
@@ -212,7 +212,7 @@ export function Composer({ connected, items, tiktokMode, storage, admin }: { con
               <Icon name={p === 'tiktok' && tiktokMode === 'inbox' ? 'download' : 'send'} className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
               <span>
                 <b>{NAME[p]}</b>{' '}
-                {p === 'tiktok' && tiktokMode === 'inbox' ? 'goes to the account’s TikTok drafts. Someone publishes it from the unit phone.' : 'goes live on the public account straight away. It can’t be unposted from here.'}
+                {p === 'tiktok' && tiktokMode === 'inbox' ? 'goes to the TikTok app’s inbox. Someone opens the notification on the unit phone and posts it.' : 'goes live on the public account straight away. It can’t be unposted from here.'}
               </span>
             </li>
           ))}
@@ -297,7 +297,7 @@ export function Composer({ connected, items, tiktokMode, storage, admin }: { con
             );
           })}
         </div>
-        {tiktokDrafts && <p className="mt-2 text-xs text-muted">TikTok: this lands in the account’s drafts. Open TikTok on the unit phone, add a sound if you like, and tap Post.</p>}
+        {tiktokDrafts && <p className="mt-2 text-xs text-muted">TikTok: this arrives as a notification in the TikTok app’s Inbox (not the Drafts folder). On the unit phone, tap it, add a sound if you like, and tap Post.</p>}
       </fieldset>
 
       {blocking.map((w) => (

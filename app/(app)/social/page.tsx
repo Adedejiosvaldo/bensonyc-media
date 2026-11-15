@@ -22,7 +22,7 @@ const STATUS: Record<TargetStatus, { text: string; cls: string }> = {
   pending: { text: 'Queued', cls: 'bg-plum-100 text-ink' },
   processing: { text: 'Uploading', cls: 'bg-gold/25 text-warn-ink' },
   published: { text: 'Live', cls: 'bg-good/15 text-good-ink' },
-  sent_to_drafts: { text: 'In TikTok drafts', cls: 'bg-magenta/10 text-accent' },
+  sent_to_drafts: { text: 'Waiting in TikTok inbox', cls: 'bg-magenta/10 text-accent' },
   failed: { text: 'Failed', cls: 'bg-danger text-white' },
 };
 
@@ -105,7 +105,7 @@ export default async function SocialPage({ searchParams }: { searchParams: { not
               );
             })}
           </ul>
-          {connected.includes('tiktok') && ttMode() === 'inbox' && <p className="mt-3 text-xs text-muted">TikTok posts land in the account’s drafts for now.</p>}
+          {connected.includes('tiktok') && ttMode() === 'inbox' && <p className="mt-3 text-xs text-muted">TikTok posts arrive as a notification in the TikTok app’s Inbox for now. Tap it on the unit phone to post.</p>}
           {admin && <Link href="/admin/accounts" className="link mt-3 inline-flex min-h-9 items-center text-sm">Manage in Admin →</Link>}
         </section>
       </div>

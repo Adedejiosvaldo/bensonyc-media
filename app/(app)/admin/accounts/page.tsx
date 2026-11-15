@@ -74,7 +74,7 @@ export default async function AccountsPage({ searchParams }: { searchParams: { n
                   <div className="flex gap-2"><dt className="text-muted">Sign-in</dt><dd>{igUnified() ? 'Facebook Login for Business (Unified login)' : 'Instagram login'}</dd></div>
                 )}
                 {p === 'tiktok' && c && (
-                  <div className="flex gap-2"><dt className="text-muted">Posting</dt><dd>{ttMode() === 'inbox' ? 'Goes to TikTok drafts (set TIKTOK_POST_MODE=direct after TikTok’s audit)' : 'Posts straight to the feed'}</dd></div>
+                  <div className="flex gap-2"><dt className="text-muted">Posting</dt><dd>{ttMode() === 'inbox' ? 'Goes to the TikTok app’s inbox to finish (set TIKTOK_POST_MODE=direct after TikTok’s audit)' : 'Posts straight to the feed'}</dd></div>
                 )}
                 {!configured[p] && <p className="text-muted">Add the app keys on Vercel first; see “Social posting” in the README.</p>}
               </dl>
