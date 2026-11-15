@@ -5,47 +5,27 @@ import { createBrowser } from '@/lib/supabase/browser';
 import { createSocialPost, prepareUpload } from '@/app/social-actions';
 import { Icon } from '@/components/Icon';
 import type { MediaFile, Platform } from '@/lib/social/types';
+import { CropEditor, Framed, NO_CROP, ratioValue, sourceRect, type Crop, type Picked, type Ratio } from './CropEditor';
 
-type Picked = { id: string; file: File; preview: string; type: 'image' | 'video' };
 type Item = { id: string; label: string };
 type Step = 'edit' | 'review' | 'done';
 
 const MB = 1024 * 1024;
 const NAME: Record<Platform, string> = { instagram: 'Instagram', tiktok: 'TikTok' };
 
-/** Instagram feed photos must sit between 4:5 portrait and 1.91:1 landscape; anything outside is rejected. */
-const IG_MIN_RATIO = 4 / 5;
-const IG_MAX_RATIO = 1.91;
-
-/** Where a photo needs trimming for Instagram, as a source rectangle, or null when it already fits. */
-function igCrop(w: number, h: number) {
-  const r = w / h;
-  if (r < IG_MIN_RATIO) {
-    const ch = Math.round(w / IG_MIN_RATIO);
-    return { sx: 0, sy: Math.round((h - ch) / 2), sw: w, sh: ch };
-  }
-  if (r > IG_MAX_RATIO) {
-    const cw = Math.round(h * IG_MAX_RATIO);
-    return { sx: Math.round((w - cw) / 2), sy: 0, sw: cw, sh: h };
-  }
-  return null;
-}
-
 /**
- * Instagram's API only takes JPEG photos, so convert anything else in the browser. When Instagram is a
- * target, photos taller than 4:5 (a normal 9:16 phone photo) are trimmed top and bottom to 4:5, centred,
- * and very wide panoramas are trimmed to 1.91:1, so Instagram accepts them.
- * TikTok rejects photos over 1080p (picture_size_check_failed), so when TikTok is a target the photo is
+ * Draw the photo exactly as framed in the crop editor, as a JPEG (Instagram's API only takes JPEG).
+ * TikTok rejects photos over 1080p (picture_size_check_failed), so when TikTok is a target the result is
  * shrunk to fit 1080 on its short side and 1920 on its long side. Instagram is happy at that size too.
  */
-async function toJpeg(file: File, fitInstagram: boolean, fitTiktok: boolean): Promise<Blob> {
+async function toJpeg(file: File, frame: number, crop: Crop, fitTiktok: boolean): Promise<Blob> {
   const bmp = await createImageBitmap(file);
-  const crop = fitInstagram ? igCrop(bmp.width, bmp.height) : null;
-  const src = crop ?? { sx: 0, sy: 0, sw: bmp.width, sh: bmp.height };
+  const src = sourceRect(bmp.width, bmp.height, frame, crop);
+  const whole = Math.abs(src.sw - bmp.width) < 1 && Math.abs(src.sh - bmp.height) < 1;
   const long = Math.max(src.sw, src.sh);
   const short = Math.min(src.sw, src.sh);
   const scale = fitTiktok ? Math.min(1, 1080 / short, 1920 / long) : Math.min(1, 2160 / long);
-  if (file.type === 'image/jpeg' && !crop && scale === 1) return file;
+  if (file.type === 'image/jpeg' && whole && scale === 1) return file;
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(src.sw * scale);
   canvas.height = Math.round(src.sh * scale);
@@ -81,6 +61,8 @@ function putWithProgress(url: string, body: Blob, type: string, onProgress: (pct
 export function Composer({ connected, items, tiktokMode, storage, admin }: { connected: Platform[]; items: Item[]; tiktokMode: 'inbox' | 'direct'; storage: 'r2' | 'supabase'; admin: boolean }) {
   const router = useRouter();
   const [files, setFiles] = useState<Picked[]>([]);
+  const [index, setIndex] = useState(0);
+  const [ratio, setRatio] = useState<Ratio>('original');
   const [caption, setCaption] = useState('');
   const [platforms, setPlatforms] = useState<Platform[]>(connected);
   const [itemId, setItemId] = useState('');
@@ -90,7 +72,10 @@ export function Composer({ connected, items, tiktokMode, storage, admin }: { con
   const [sentTo, setSentTo] = useState<Platform[]>([]);
   const heading = useRef<HTMLHeadingElement>(null);
 
-  useEffect(() => () => files.forEach((f) => URL.revokeObjectURL(f.preview)), [files]);
+  // Free the previews when the page closes (not on every change: the editor still shows them).
+  const live = useRef(files);
+  live.current = files;
+  useEffect(() => () => live.current.forEach((f) => URL.revokeObjectURL(f.preview)), []);
   useEffect(() => {
     if (step !== 'edit') heading.current?.focus();
   }, [step]);
@@ -102,27 +87,34 @@ export function Composer({ connected, items, tiktokMode, storage, admin }: { con
     if (platforms.includes('instagram') && files.length > 10) w.push('Instagram carousels take up to 10 items. Remove some, or untick Instagram.');
     if (platforms.includes('tiktok') && videos && images) w.push('TikTok can’t mix photos and videos. Untick TikTok or use one type.');
     if (platforms.includes('tiktok') && videos > 1) w.push('TikTok takes one video per post.');
+    if (platforms.includes('instagram') && images && ratio === '9:16') w.push('Instagram feed posts can’t be as tall as 9:16. Pick 4:5 with the crop button, or untick Instagram.');
     if (storage === 'supabase' && files.some((f) => f.file.size > 50 * MB)) w.push(admin ? 'Files over 50 MB won’t upload until Cloudflare R2 is set up (see “Media storage” in the README). Compress the video for now.' : 'Files over 50 MB can’t be uploaded yet. Compress the video, or ask an admin.');
     if (storage === 'r2' && files.some((f) => f.file.size > 2048 * MB)) w.push('Files over 2 GB can’t be uploaded.');
     return w;
-  }, [platforms, files, videos, images, storage, admin]);
+  }, [platforms, files, videos, images, storage, admin, ratio]);
   const advisory = platforms.includes('instagram') && files.some((f) => f.type === 'video' && f.file.size > 300 * MB) ? 'Instagram may reject videos over about 300 MB. Export at 1080p if it fails.' : null;
 
   const pick = (list: FileList | null) => {
     if (!list) return;
-    const next = Array.from(list)
+    const next: Picked[] = Array.from(list)
       .filter((f) => f.type.startsWith('image/') || f.type.startsWith('video/'))
-      .map((f) => ({ id: crypto.randomUUID(), file: f, preview: URL.createObjectURL(f), type: (f.type.startsWith('video/') ? 'video' : 'image') as 'image' | 'video' }));
+      .map((f) => ({ id: crypto.randomUUID(), file: f, preview: URL.createObjectURL(f), type: f.type.startsWith('video/') ? 'video' : 'image', crop: NO_CROP }));
+    if (!next.length) return;
+    // The editor needs each photo's size to frame it.
+    for (const p of next.filter((x) => x.type === 'image')) {
+      const img = new Image();
+      img.onload = () => setFiles((cur) => cur.map((x) => (x.id === p.id ? { ...x, w: img.naturalWidth, h: img.naturalHeight } : x)));
+      img.src = p.preview;
+    }
+    setIndex(files.length);
     setFiles((cur) => [...cur, ...next]);
   };
-  const move = (i: number, d: number) =>
-    setFiles((cur) => {
-      const n = [...cur];
-      const j = i + d;
-      if (j < 0 || j >= n.length) return cur;
-      [n[i], n[j]] = [n[j], n[i]];
-      return n;
-    });
+  const remove = (id: string) => {
+    const gone = files.find((f) => f.id === id);
+    if (gone) URL.revokeObjectURL(gone.preview);
+    setFiles((cur) => cur.filter((x) => x.id !== id));
+    setIndex((i) => Math.max(0, Math.min(i, files.length - 2)));
+  };
 
   function review() {
     setError(null);
@@ -135,12 +127,13 @@ export function Composer({ connected, items, tiktokMode, storage, admin }: { con
 
   async function submit() {
     setError(null);
+    const frame = ratioValue(ratio, files, platforms.includes('instagram'));
     const uploaded: MediaFile[] = [];
     try {
       for (const [i, f] of files.entries()) {
         const label = `Uploading ${i + 1} of ${files.length}`;
         setBusy(`${label}…`);
-        const body = f.type === 'image' ? await toJpeg(f.file, platforms.includes('instagram'), platforms.includes('tiktok')) : f.file;
+        const body = f.type === 'image' ? await toJpeg(f.file, frame, f.crop, platforms.includes('tiktok')) : f.file;
         const mime = f.type === 'image' ? 'image/jpeg' : f.file.type || 'video/mp4';
         const slot = await prepareUpload({ name: f.file.name, type: mime, size: body.size });
         if (slot.error || !slot.path || !slot.url) throw new UploadError('The upload couldn’t start. Try again in a minute.', slot.error ?? 'prepareUpload returned no path.');
@@ -158,6 +151,8 @@ export function Composer({ connected, items, tiktokMode, storage, admin }: { con
       files.forEach((f) => URL.revokeObjectURL(f.preview));
       setSentTo(platforms);
       setFiles([]);
+      setIndex(0);
+      setRatio('original');
       setCaption('');
       setItemId('');
       setStep('done');
@@ -199,13 +194,8 @@ export function Composer({ connected, items, tiktokMode, storage, admin }: { con
           <h2 ref={heading} tabIndex={-1} className="section-title text-2xl outline-none">Ready to post?</h2>
         </div>
         <div className="flex gap-4 rounded-2xl bg-plum-100/60 p-4">
-          <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-plum-100 outline outline-1 -outline-offset-1 outline-black/10">
-            {first?.type === 'video' ? (
-              <video src={first.preview} className="h-full w-full object-cover" muted playsInline />
-            ) : first ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={first.preview} alt="First item of the post" className="h-full w-full object-cover" />
-            ) : null}
+          <div className="relative w-24 shrink-0 self-start overflow-hidden rounded-xl outline outline-1 -outline-offset-1 outline-black/10">
+            {first && <Framed f={first} frame={ratioValue(ratio, files, platforms.includes('instagram'))} />}
             {files.length > 1 && <span className="absolute bottom-1.5 right-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-bold text-white">+{files.length - 1}</span>}
           </div>
           <div className="min-w-0 flex-1">
@@ -247,47 +237,21 @@ export function Composer({ connected, items, tiktokMode, storage, admin }: { con
 
   return (
     <div className="space-y-5">
-      <label className="group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line p-8 text-center transition-colors duration-150 focus-within:border-magenta hover:border-magenta/60">
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-magenta/10 text-accent"><Icon name="upload" className="h-6 w-6" /></span>
-        <span className="font-bold">Add photos or a video</span>
-        <span className="text-xs text-muted">From your camera roll. Several photos make a carousel on Instagram and a photo post on TikTok. Videos go up as Reels: vertical 9:16 works best.</span>
-        <input type="file" accept="image/*,video/*" multiple className="sr-only" onChange={(e) => { pick(e.target.files); e.target.value = ''; }} />
-      </label>
-
-      {files.length > 0 && (
-        <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Post order">
-          {files.map((f, i) => (
-            <li key={f.id} className="overflow-hidden rounded-xl border border-line bg-card">
-              <div className="relative aspect-square bg-plum-100">
-                {f.type === 'video' ? (
-                  <video src={f.preview} className="h-full w-full object-cover" muted playsInline />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={f.preview} alt="" className="h-full w-full object-cover" />
-                )}
-                <span className="absolute left-1.5 top-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-bold text-white">{i + 1}{f.type === 'video' ? ' · video' : ''}</span>
-              </div>
-              <div className="flex items-center gap-1 p-1">
-                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="flex h-10 w-10 items-center justify-center rounded-lg text-ink hover:bg-plum-100 disabled:opacity-30" aria-label={`Move item ${i + 1} earlier`}>
-                  <Icon name="back" className="h-4 w-4" />
-                </button>
-                <button type="button" onClick={() => move(i, 1)} disabled={i === files.length - 1} className="flex h-10 w-10 items-center justify-center rounded-lg text-ink hover:bg-plum-100 disabled:opacity-30" aria-label={`Move item ${i + 1} later`}>
-                  <Icon name="arrow" className="h-4 w-4" />
-                </button>
-                <button type="button" onClick={() => setFiles((cur) => cur.filter((x) => x.id !== f.id))} className="ml-auto flex h-10 w-10 items-center justify-center rounded-lg text-danger hover:bg-danger/10" aria-label={`Remove item ${i + 1}`}>
-                  <Icon name="x" className="h-4 w-4" />
-                </button>
-              </div>
-            </li>
-          ))}
-        </ol>
-      )}
-
-      {images > 0 && platforms.includes('instagram') && (
-        <p className="-mt-2 flex items-start gap-2 text-xs text-muted">
-          <Icon name="eye" className="mt-px h-3.5 w-3.5 shrink-0" />
-          Instagram takes photos from 4:5 portrait to 1.91:1 landscape. Taller photos, like a normal 9:16 phone photo, are trimmed top and bottom to 4:5, so keep faces in the middle.
-        </p>
+      {files.length > 0 ? (
+        <>
+          <CropEditor files={files} setFiles={setFiles} index={Math.min(index, files.length - 1)} setIndex={setIndex} ratio={ratio} setRatio={setRatio} instagram={platforms.includes('instagram')} onRemove={remove} />
+          <label className="btn-ghost w-full cursor-pointer focus-within:ring-2 focus-within:ring-magenta">
+            <Icon name="upload" className="h-4 w-4" /> Add more
+            <input type="file" accept="image/*,video/*" multiple className="sr-only" onChange={(e) => { pick(e.target.files); e.target.value = ''; }} />
+          </label>
+        </>
+      ) : (
+        <label className="group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line p-8 text-center transition-colors duration-150 focus-within:border-magenta hover:border-magenta/60">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-magenta/10 text-accent"><Icon name="upload" className="h-6 w-6" /></span>
+          <span className="font-bold">Add photos or a video</span>
+          <span className="text-xs text-muted">From your camera roll. Several photos make a carousel on Instagram and a photo post on TikTok. Next you can crop each one. Videos go up as Reels: vertical 9:16 works best.</span>
+          <input type="file" accept="image/*,video/*" multiple className="sr-only" onChange={(e) => { pick(e.target.files); e.target.value = ''; }} />
+        </label>
       )}
 
       <div>
