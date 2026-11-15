@@ -107,7 +107,7 @@ Development mode is enough while the app only posts to an account with a role on
 
 ## AI social media manager
 
-Heads, admins and the Social team see **Ideas for this week** at the top of **This week**. It is built by Claude (Opus 5.5) from:
+Heads, admins and the Social team see **Ideas for this week** at the top of **This week**. It is built by Claude (Sonnet 5.5) from:
 - the unit's own posts and numbers from the last 90 days (from Insights), matched to series through the board's post links;
 - the month's theme and big moment from the 9-month plan, and the weekly rhythm;
 - recent posts, with real like and comment counts, from public Instagram accounts it chose to learn from (business discovery, Unified login only);
@@ -119,7 +119,7 @@ Each run it compares the last 7 days with the 90-day norm, searches Instagram an
 
 **When:** the daily job starts next week's ideas on Friday and collects them by Saturday morning. Anyone who can post can also tap **Get ideas** for the week on screen; results arrive within the hour (refresh the page).
 
-**Setup:** run `supabase/migrations/0005_ai_manager.sql`, add `ANTHROPIC_API_KEY` on Vercel, redeploy. Each run is one Message Batch (half price, no timeout), roughly $0.20–0.40 including a handful of web searches.
+**Setup:** run `supabase/migrations/0005_ai_manager.sql`, add `ANTHROPIC_API_KEY` on Vercel, redeploy. Each run is one Message Batch (half price, no timeout), roughly $0.20–0.35 including up to 5 web searches. Each week gets one run: once ideas are in (or on the way), the button is gone; only a failed run can be retried.
 
 ## Church page on its own domain
 
